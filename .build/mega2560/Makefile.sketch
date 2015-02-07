@@ -1,0 +1,14 @@
+
+
+
+
+
+.build/mega2560/src/datajr0.0.1.cpp : src/datajr0.0.1.ino
+	@mkdir -p .build/mega2560/src
+	@echo [93msrc/datajr0.0.1.ino[0m
+	@/usr/local/bin/ino preproc  -o $@ $^
+
+
+all : .build/mega2560/src/datajr0.0.1.cpp
+	@true
+
