@@ -155,8 +155,8 @@ class plotlyThread (threading.Thread):
         aAlarm = 0
         aAmbient = 0
         aHum = 0
-
-        aSetpoint = ""
+        aSetpoint = 0
+        
         while exitflag == 0:
 
             old_sensor_data = sensor_data
@@ -209,7 +209,7 @@ class uiThread (threading.Thread):
         global exitflag
         exitflag = 0
         x = 0
-        try:
+
         while True:
             screen.erase()
             screen.border(0, curses.color_pair(1))
@@ -441,8 +441,8 @@ class uiThread (threading.Thread):
                 screen.addstr(5, 52, "L-Alarm:")
                 screen.addstr(7, 52, "Status.:")
                 
-                screen.addstr(1, 16, str(aSetpoint));
-                screen.addstr(1,16, str(aTemp))
+                screen.addstr(1, 16, aSetpoint);
+                screen.addstr(3, 16, str(aTemp))
 
                 x = screen.getch()
                 x = 0
@@ -451,9 +451,7 @@ class uiThread (threading.Thread):
                 break
         
         exitflag = 1
-        except serial.SerialException:
-            print "Serial line is fucked up, exiting."
-            sys.exit(0)
+
 
         
 # Create new threads
