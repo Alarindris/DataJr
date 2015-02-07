@@ -41,12 +41,6 @@
 #define ALARM_PIN 8
 #define DHT11PIN 2
 
-template <typename T>;
-T f(T arg)
-{
-    return arg;
-}
-
 /*** DHT11 vars ***/
 dht11 DHT11;
 
@@ -87,6 +81,7 @@ double tempAvg = 0;
 double tmp, tempIn, runningAvg;
 int multiSample = 5000;
 String outputOn;
+bool TIMEOUT = false;
 
 void Alarm(bool on){
     (on)?digitalWrite(ALARM_PIN, HIGH):digitalWrite(ALARM_PIN, LOW);
@@ -193,7 +188,7 @@ void RTDDEBUG(void){
  }
  
 void SerialSend(){
-	Serial1.println("#");
+	/*Serial1.println("#");
 	Serial1.print("Target:");Serial1.print(Setpoint); Serial1.print(" ");
 	Serial1.print("Temp(C):");Serial1.print(Input); Serial1.print(" ");
 	Serial1.print(Output);Serial1.print("/");Serial1.print(WindowSize); Serial1.print(" ");
@@ -203,7 +198,11 @@ void SerialSend(){
 		Serial1.print("P:");Serial1.print(myPID.GetKp());Serial1.print(" ");
 		Serial1.print("I:");Serial1.print(myPID.GetKi());Serial1.print(" ");
 		Serial1.print("D:");Serial1.print(myPID.GetKd());Serial1.println();
-	}
+	}*/
+    
+    Serial1.println("#");
+    Serial1.println(Setpoint);
+    
 	Serial1.flush();
 }
 
@@ -290,6 +289,9 @@ void SerialReceive(){
                 Alarm(false);
             }
             WriteVars();
+            
+            Serial1.println("");
+            
 		}
     } 
 }
@@ -374,7 +376,7 @@ void loop(void) {
 		tempIn = (double)RTD_CH0.rtd_res_raw;
 		// calculate RTD resistance
 		tmp = tempIn * 400 / 32768;
-		tmp = (tempIn / 32) - 256.815;
+		tmp = (tempIn / 32) - 256.815; // <-sensor calibration
 			
 		tempAvg += tmp;
 		runningAvg = tempAvg / tempTemp;

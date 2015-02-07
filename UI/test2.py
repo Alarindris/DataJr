@@ -2,7 +2,7 @@
 
 import threading
 import plotly.plotly as py
-from plotly.graph_objs import Scatter, Layout, Figure
+from plotly.graph_objs import *
 import datetime
 import time
 import serial
@@ -21,16 +21,21 @@ atexit.register(exit)
 screenWidth = 80
 screenHeight = 24
 screenstd = curses.initscr()
+
 curses.start_color()
+curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
+
 curses.cbreak()
 screenstd.keypad(1)
 curses.curs_set(0)
 h, w = screenstd.getmaxyx()
-win = curses.newwin(2,w,0,0)
-screen = curses.newwin((h-2),w,2,0)
- 
+win = curses.newwin(1,w,0,0)
+screen = curses.newwin((h-2),w,1,0)
+bottomWin = curses.newwin((1),w,h,0)
 ser = serial.Serial('/dev/ttyAMA0', 115200, timeout=3)
- 
+
+'''Global vars'''
+
 username = 'Alarindris'
 api_key = '7775k8lmv3'
 stream_token = 'v1qy8o8a39'
@@ -39,6 +44,7 @@ py.sign_in(username, api_key)
 trace1 = Scatter(
     x=[],
     y=[],
+    yaxis = 'y2',
     name= "Temp(C)",
     stream=dict(
         token=stream_token,
@@ -57,7 +63,36 @@ trace2 = Scatter(
 )
  
 layout = Layout(
-    title='Fishtank temperature plot'
+    title='Fishtank temperature plot',
+    showlegend=True,
+    autosize=True,
+    width=864,
+    height=499,
+    xaxis=XAxis(
+        title='Time CST',
+        range=[1423200390292.55, 1423200478609.1],
+        type='date',
+        autorange=True
+    ),
+    yaxis=YAxis(
+        title='PID output %',
+        range=[0, 10000],
+        type='linear',
+        autorange=False
+    ),
+    legend=Legend(
+        x=1.0015037593984963,
+        y=-0.1755485893416928
+    ),
+    yaxis2=YAxis(
+        title='Temperature C',
+        range=[23.468888888888888, 23.49111111111111],
+        type='linear',
+        autorange=True,
+        anchor='x',
+        overlaying='y',
+        side='right'
+    )
 )
  
 fig = Figure(data=[trace1,trace2], layout=layout)
@@ -84,88 +119,110 @@ class plotlyThread (threading.Thread):
         self.name = name
         self.counter = counter
     def run(self):
+        sensor_data = 0
+        global aSetpoint
+        global aP
+        global aI
+        global aD
+        global aPOut
+        global aIOut
+        global aDOut
+        global aTuning
+        global aCont
+        global aMode
+        global aOver
+        global aHAlarm
+        global aLAlarm
+        global aAlarm
+        global aAmbient
+        global aHum
+        global aTemp
+        global aOut
+        aTemp = 0
+        aOut = 0
+        aP = 0
+        aI = 0
+        aD = 0
+        aPOut = 0
+        aIOut = 0
+        aDOut = 0
+        aTuning = 0
+        aCont = 0
+        aMode = 0
+        aOver = 0
+        aHAlarm = 0
+        aLAlarm = 0
+        aAlarm = 0
+        aAmbient = 0
+        aHum = 0
+
+        aSetpoint = ""
         while exitflag == 0:
-            '''event = screen.getch(1,0)
-            if event > 87:
-                if(event == 83 or event == 115): #S or s
-                    curses.curs_set(1)
-                    screen.addstr(1,0,"New setpoint?")
-                    screen.nodelay(0)
-                    eventstr = screen.getstr()
-                    ser.write("s\n")
-                    ser.write(eventstr + "\n")
-                elif(event == 88 or event == 120): #X or x
-                    stop()
-                    thread.exit()
-                    sys.exit(0)
-                elif(event == 65 or event == 97): #A or a
-                    screen.addstr(1,0,"Autotune enable (y or n)?")
-                    screen.nodelay(0)
-                    eventstr = screen.getstr()
-                    ser.write("a\n")
-                    ser.write(eventstr + "\n")
-                elif(event == 80 or event == 112): #P or p
-                    curses.curs_set(1)
-                    screen.addstr(1,0,"New proportional coefficient?")
-                    screen.nodelay(0)
-                    eventstr = screen.getstr()
-                    ser.write("p\n")
-                    ser.write(eventstr + "\n")
-                elif(event == 73 or event == 105): #I or i
-                    curses.curs_set(1)
-                    screen.addstr(1,0,"New integral coefficient?")
-                    screen.nodelay(0)
-                    eventstr = screen.getstr()
-                    ser.write("i\n")
-                    ser.write(eventstr + "\n")
-                elif(event == 68 or event == 100): #D or d
-                    curses.curs_set(1)
-                    screen.addstr(1,0,"New derivative coefficient?")
-                    screen.nodelay(0)
-                    eventstr = screen.getstr()
-                    ser.write("d\n")
-                    ser.write(eventstr + "\n")
-            
-                #screen.erase()
-        
-            #curses.curs_set(0)
-            #screen.nodelay(1)'''
-            
+
+            old_sensor_data = sensor_data
             sensor_data = getSerialLine()
-            if sensor_data == "#":
-                sensor_data = getSerialLine()
-                win.erase()
-                win.addstr(0,2, sensor_data, curses.A_REVERSE)
-                win.refresh()
+
             if sensor_data == "^":
-                sensor_data = getSerialLine()
-                sensor1_data = getSerialLine()
-                #screen.addstr(3, 39, "*Sent*")
-                #screen.addstr(4, 40, str(sensor_data), curses.A_REVERSE)
-                #screen.addstr(5, 40, str(sensor1_data),curses.A_REVERSE)
-                x=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-                stream.write({'x': x, 'y': sensor_data})
-                stream1.write({'x': x, 'y': sensor1_data})
-
-
+                aTemp = getSerialLine()
+                aOut = getSerialLine()
+                x = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                stream.write({'x': x, 'y': aTemp})
+                stream1.write({'x': x, 'y': aOut})
+            if sensor_data == "#":
+                aSetpoint = getSerialLine()
+            if sensor_data == "$":
+                aP = getSerialLine()
+            if sensor_data == "%":
+                aI = getSerialLine()
+            if sensor_data == "!":
+                aD = getSerialLine()
+            if sensor_data == "&":
+                aPOut = getSerialLine()
+            if sensor_data == "*":
+                aIOut = getSerialLine()
+            if sensor_data == "(":
+                aDOut = getSerialLine()
+            if sensor_data == ")":
+                aTuning = getSerialLine()
+            if sensor_data == "_":
+                aCont = getSerialLine()
+            if sensor_data == "+":
+                aMode = getSerialLine()
+            if sensor_data == "-":
+                aOver = getSerialLine()
+            if sensor_data == "=":
+                aHAlarm = getSerialLine()
+            if sensor_data == "[":
+                aLAlarm = getSerialLine()
+            if sensor_data == "]":
+                aAlarm  = getSerialLine()
+            if sensor_data == "{":
+                aAmbient = getSerialLine()
+            if sensor_data == "}":
+                aHum = getSerialLine()
+                
 class uiThread (threading.Thread):
     def __init__(self, threadID, name, counter):
         threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.counter = counter
+
     def run(self):
         global exitflag
         exitflag = 0
         x = 0
+        try:
         while True:
             screen.erase()
-            screen.border(0)
-            screen.addstr(2, 2, "***Main Menu***")
-            screen.addstr(4, 4, "1 - Setup")
-            screen.addstr(5, 4, "2 - System")
-            screen.addstr(6, 4, "3 - Display")
-            screen.addstr(7, 4, "4 - Exit")
+            screen.border(0, curses.color_pair(1))
+            screen.addstr(2, 4, "***Main Menu***", curses.color_pair(1))
+            screen.addstr(4, 8, "Setup", curses.color_pair(1))
+            screen.addstr(5, 8, "System", curses.color_pair(1))
+            screen.addstr(6, 8, "Display", curses.color_pair(1))
+            screen.addstr(7, 8, "Exit", curses.color_pair(1))
+            
+            screen.addstr(4, 4, "1 - ")
+            screen.addstr(5, 4, "2 - ")
+            screen.addstr(6, 4, "3 - ")
+            screen.addstr(7, 4, "4 - ")
             screen.refresh()
 
             x = screen.getch()
@@ -361,13 +418,42 @@ class uiThread (threading.Thread):
                         x = 0
                         break
             elif x == ord('3'):
+                screen.erase()
+                screen.border(0)
+                screen.addstr(1, 2, "Setpoint.....:")
+                screen.addstr(3, 2, "Temp.........:")
+                screen.addstr(5, 2, "Humidity.....:")
+                screen.addstr(7, 2, "Relay state..:")
+                screen.addstr(9, 2, "Override.....:")
+                screen.addstr(11, 2, "System status:")
+                
+                screen.addstr(1, 32, "Px.....:")
+                screen.addstr(3, 32, "Ix.....:")
+                screen.addstr(5, 32, "Dx.....:")
+                screen.addstr(7, 32, "P-Out..:")
+                screen.addstr(9, 32, "I-Out..:")
+                screen.addstr(11, 32, "D-Out..:")
+                screen.addstr(13, 32, "Output.:")
+                screen.addstr(15, 32, "Setting:")
+                
+                screen.addstr(1, 52, "H-Alarm:")
+                screen.addstr(3, 52, "Status.:")
+                screen.addstr(5, 52, "L-Alarm:")
+                screen.addstr(7, 52, "Status.:")
+                
+                screen.addstr(1, 16, str(aSetpoint));
+                screen.addstr(1,16, str(aTemp))
+
+                x = screen.getch()
                 x = 0
-                break
             elif x == ord('4'):
                 x = 0
                 break
         
         exitflag = 1
+        except serial.SerialException:
+            print "Serial line is fucked up, exiting."
+            sys.exit(0)
 
         
 # Create new threads
