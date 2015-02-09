@@ -31,6 +31,7 @@ curses.curs_set(0)
 h, w = screenstd.getmaxyx()
 win = curses.newwin(1,w,0,0)
 screen = curses.newwin((h-2),w,1,0)
+screen2= curses.newwin((h-2),w,1,0)
 bottomWin = curses.newwin((1),w,h,0)
 ser = serial.Serial('/dev/ttyAMA0', 115200, timeout=3)
 
@@ -167,15 +168,17 @@ class plotlyThread (threading.Thread):
                 aOut = getSerialLine()
                 x = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
                 stream.write({'x': x, 'y': aTemp})
-                stream1.write({'x': x, 'y': aOut})
+                stream1.write({'x': x, 'y': aOut})                   
             if sensor_data == "#":
-                aSetpoint = getSerialLine()
+                aSetpoint = getSerialLine()                  
+            if sensor_data == "}":
+                aHum = getSerialLine()                    
             if sensor_data == "$":
-                aP = getSerialLine()
+                aP = getSerialLine()                   
             if sensor_data == "%":
-                aI = getSerialLine()
+                aI = getSerialLine()                    
             if sensor_data == "!":
-                aD = getSerialLine()
+                aD = getSerialLine()          
             if sensor_data == "&":
                 aPOut = getSerialLine()
             if sensor_data == "*":
@@ -198,20 +201,48 @@ class plotlyThread (threading.Thread):
                 aAlarm  = getSerialLine()
             if sensor_data == "{":
                 aAmbient = getSerialLine()
-            if sensor_data == "}":
-                aHum = getSerialLine()
+            
+            if display == True:
+                screen.addstr(1, 16, str(aSetpoint), curses.A_REVERSE)
+                screen.addstr(3, 16, str(aTemp), curses.A_REVERSE)
+                screen.addstr(5, 16, str(aHum), curses.A_REVERSE)
+                screen.addstr(7, 16, str(aAmbient), curses.A_REVERSE)
+                screen.addstr(9, 16, aCont, curses.A_REVERSE)
+                screen.addstr(11,16, "N/A", curses.A_REVERSE)
+                screen.addstr(13,16, "N/A", curses.A_REVERSE)
                 
+                screen.addstr(1, 40, str(aP), curses.A_REVERSE)
+                screen.addstr(3, 40, str(aI), curses.A_REVERSE)
+                screen.addstr(5, 40, str(aD), curses.A_REVERSE)
+                screen.addstr(7, 40, "N/A", curses.A_REVERSE)
+                screen.addstr(9, 40, "N/A", curses.A_REVERSE)
+                screen.addstr(11,40, "N/A", curses.A_REVERSE)
+                screen.addstr(13,40, str(aOut), curses.A_REVERSE)
+                screen.addstr(15,40, "N/A", curses.A_REVERSE)
+                
+                screen.refresh()
+            else:
+                win.erase()
+                win.addstr(0, 1, "Temp:      Target:      Control:")
+                win.addstr(0, 6, str(aTemp), curses.A_REVERSE)
+                win.addstr(0, 19, str(aSetpoint), curses.A_REVERSE)
+                win.addstr(0, 33, str(aCont), curses.A_REVERSE)
+                win.refresh()
+            
+
 class uiThread (threading.Thread):
     def __init__(self, threadID, name, counter):
         threading.Thread.__init__(self)
 
     def run(self):
         global exitflag
+        global display
+        display = False
         exitflag = 0
         x = 0
 
         while True:
-            screen.erase()
+            screen.clear()
             screen.border(0, curses.color_pair(1))
             screen.addstr(2, 4, "***Main Menu***", curses.color_pair(1))
             screen.addstr(4, 8, "Setup", curses.color_pair(1))
@@ -418,14 +449,18 @@ class uiThread (threading.Thread):
                         x = 0
                         break
             elif x == ord('3'):
+                display = True
+                win.erase()
+                win.refresh()
                 screen.erase()
                 screen.border(0)
                 screen.addstr(1, 2, "Setpoint.....:")
                 screen.addstr(3, 2, "Temp.........:")
                 screen.addstr(5, 2, "Humidity.....:")
-                screen.addstr(7, 2, "Relay state..:")
-                screen.addstr(9, 2, "Override.....:")
-                screen.addstr(11, 2, "System status:")
+                screen.addstr(7, 2, "Ambient temp.:")
+                screen.addstr(9, 2, "Relay state..:")
+                screen.addstr(11, 2, "Override.....:")
+                screen.addstr(13, 2, "System status:")
                 
                 screen.addstr(1, 32, "Px.....:")
                 screen.addstr(3, 32, "Ix.....:")
@@ -440,12 +475,10 @@ class uiThread (threading.Thread):
                 screen.addstr(3, 52, "Status.:")
                 screen.addstr(5, 52, "L-Alarm:")
                 screen.addstr(7, 52, "Status.:")
-                
-                screen.addstr(1, 16, aSetpoint);
-                screen.addstr(3, 16, str(aTemp))
 
                 x = screen.getch()
                 x = 0
+                display = False
             elif x == ord('4'):
                 x = 0
                 break

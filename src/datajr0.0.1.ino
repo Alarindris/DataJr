@@ -188,6 +188,7 @@ void RTDDEBUG(void){
  }
  
 void SerialSend(){
+    static int t;
 	/*Serial1.println("#");
 	Serial1.print("Target:");Serial1.print(Setpoint); Serial1.print(" ");
 	Serial1.print("Temp(C):");Serial1.print(Input); Serial1.print(" ");
@@ -199,10 +200,23 @@ void SerialSend(){
 		Serial1.print("I:");Serial1.print(myPID.GetKi());Serial1.print(" ");
 		Serial1.print("D:");Serial1.print(myPID.GetKd());Serial1.println();
 	}*/
-    
+    (tuning)?t = 1:t = 0;
     Serial1.println("#");
     Serial1.println(Setpoint);
-    
+    Serial1.println("}");
+    Serial1.println((double)DHT11.humidity);
+    Serial1.println("$");
+    Serial1.println(myPID.GetKp());
+    Serial1.println("%");
+    Serial1.println(myPID.GetKi());
+    Serial1.println("!");
+    Serial1.println(myPID.GetKd());
+    Serial1.println(")");
+    Serial1.println(t);
+    Serial1.println("{");
+    Serial1.println((double)DHT11.temperature);
+    Serial1.println("_");
+    Serial1.println(outputOn);
 	Serial1.flush();
 }
 
@@ -232,12 +246,11 @@ void SerialReceive(){
 				inputString += inChar;
 				inChar = char(Serial1.read());
 			}
-			if(inputString == "s" || inputString == "S"){
+			if(inputString == "s"){
 				inputString = "";
-				inChar = char(Serial1.read());
-				while (inChar != '\n'){
-					inputString += inChar;
-					inChar = char(Serial1.read());
+				while (Serial1.available() > 0){
+                    inChar = char(Serial1.read());
+                    inputString += inChar;
 				}
 				Setpoint = atof(inputString.c_str());
 			}
@@ -376,7 +389,7 @@ void loop(void) {
 		tempIn = (double)RTD_CH0.rtd_res_raw;
 		// calculate RTD resistance
 		tmp = tempIn * 400 / 32768;
-		tmp = (tempIn / 32) - 256.815; // <-sensor calibration
+		tmp = (tempIn / 32) - 257.152; // <-sensor calibration
 			
 		tempAvg += tmp;
 		runningAvg = tempAvg / tempTemp;
