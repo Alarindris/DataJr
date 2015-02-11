@@ -167,7 +167,7 @@ class plotlyThread (threading.Thread):
                 aTemp = getSerialLine()
                 aOut = getSerialLine()
                 x = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-                stream.write({'x': x, 'y': aTemp})
+                stream.write({'x': x, 'y': "%.3f" % (float(aTemp)/10)})
                 stream1.write({'x': x, 'y': aOut})                   
             if sensor_data == "#":
                 aSetpoint = getSerialLine()                  
@@ -204,7 +204,7 @@ class plotlyThread (threading.Thread):
             
             if display == True:
                 screen.addstr(1, 16, str(aSetpoint), curses.A_REVERSE)
-                screen.addstr(3, 16, str(aTemp), curses.A_REVERSE)
+                screen.addstr(3, 16, "%.3f" % (float(aTemp)/10), curses.A_REVERSE)
                 screen.addstr(5, 16, str(aHum), curses.A_REVERSE)
                 screen.addstr(7, 16, str(aAmbient), curses.A_REVERSE)
                 screen.addstr(9, 16, aCont, curses.A_REVERSE)
@@ -224,7 +224,7 @@ class plotlyThread (threading.Thread):
             else:
                 win.erase()
                 win.addstr(0, 1, "Temp:      Target:      Control:")
-                win.addstr(0, 6, str(aTemp), curses.A_REVERSE)
+                win.addstr(0, 6, "%.3f" % (float(aTemp)/10), curses.A_REVERSE)
                 win.addstr(0, 19, str(aSetpoint), curses.A_REVERSE)
                 win.addstr(0, 33, str(aCont), curses.A_REVERSE)
                 win.refresh()

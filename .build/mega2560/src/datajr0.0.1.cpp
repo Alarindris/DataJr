@@ -24,10 +24,10 @@ void SetupSPI(void);
 void ReadVars(void);
 void WriteVars(void);
 void setup(void);
+void AlarmCheck(double t);
 void loop(void);
 #line 1 "src/datajr0.0.1.ino"
 /***************************************************************************
-* File Name: serial_MAX31865.h
 * Processor/Platform: Arduino MEGA 2560
 * Development Environment: Arduino 1.0.6
 *
@@ -107,12 +107,22 @@ unsigned long now = millis();
 int tempTemp = 0;
 double tempAvg = 0;
 double tmp, tempIn, runningAvg;
-int multiSample = 5000;
+int multiSample = 100;
 String outputOn;
 bool TIMEOUT = false;
+double hAlarm = 1000;
+double lAlarm = -1000;
+bool alarmOn = false;
 
 void Alarm(bool on){
-    (on)?digitalWrite(ALARM_PIN, HIGH):digitalWrite(ALARM_PIN, LOW);
+    if (on){
+        digitalWrite(ALARM_PIN, HIGH);
+        alarmOn = true;
+    }
+    else{    
+        digitalWrite(ALARM_PIN, LOW);
+        alarmOn = false;
+    }
 }
 
 void AutoTuneHelper(boolean start){
@@ -175,8 +185,6 @@ double Kelvin(double celsius){
 }
 
 void RTDDEBUG(void){
-
-
 		Serial1.print("RTD Fault, register: ");
 		do{
 			u8g.setFont(u8g_font_unifont);
@@ -214,8 +222,9 @@ void RTDDEBUG(void){
 		}
 	  // end of fault handling	
  }
- 
+
 void SerialSend(){
+    digitalWrite(22, HIGH);
     static int t;
 	/*Serial1.println("#");
 	Serial1.print("Target:");Serial1.print(Setpoint); Serial1.print(" ");
@@ -246,25 +255,24 @@ void SerialSend(){
     Serial1.println("_");
     Serial1.println(outputOn);
 	Serial1.flush();
+    digitalWrite(22, LOW);
 }
 
-/*
-void SerialSendData(char c, ){
-    
-}*/
-
 void SendPlotData(){
+    digitalWrite(22, HIGH);
 	Serial1.println("^");
-    Serial1.println(Input);
+    Serial1.println(Input*10);
 	Serial1.println(Output);
 	Serial1.flush();
+    digitalWrite(22, LOW);
 }
  
 void SerialReceive(){
 	String inputString;
 	char inChar;
 	if(Serial1.available() > 0)
-	{
+	{   
+        digitalWrite(23, HIGH);
 		inChar = char(Serial1.read());
 		//Serial1.println("#");
 		//Serial1.print("received");
@@ -334,6 +342,7 @@ void SerialReceive(){
             Serial1.println("");
             
 		}
+        digitalWrite(23, LOW);
     } 
 }
 
@@ -403,8 +412,23 @@ void setup(void) {
 	SetupAutoTune();
 	SetupSPI();
     SetupAlarm();
+    pinMode(22, OUTPUT); //serial out  <- indicator LEDs
+    pinMode(23, OUTPUT); //serial in
 }
  	
+void AlarmCheck(double t)
+{
+    if(t > hAlarm){
+        Alarm(true);
+    }
+    else if(t < lAlarm){
+        Alarm(true);
+    }
+    else if(alarmOn == true){
+        Alarm(false);
+    }
+}
+    
 void loop(void) {
 	u8g.firstPage();  /***<-- DONT MOVE THIS??***/
 	now = millis();
@@ -418,10 +442,13 @@ void loop(void) {
 		// calculate RTD resistance
 		tmp = tempIn * 400 / 32768;
 		tmp = (tempIn / 32) - 257.152; // <-sensor calibration
-			
+        
 		tempAvg += tmp;
 		runningAvg = tempAvg / tempTemp;
-		Input = runningAvg;
+		
+        AlarmCheck(runningAvg);
+        
+        Input = runningAvg;
 		
 		if(tuning){
 			byte val = (aTune.Runtime());
@@ -471,8 +498,6 @@ void loop(void) {
 		serialTime+=500;
 	}
     
-    
-	
     if(millis() % 20000 == 0){
         WriteVars();
     }
