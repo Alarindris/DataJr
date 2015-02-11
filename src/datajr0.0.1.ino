@@ -1,3 +1,32 @@
+#include <Arduino.h>
+#include "U8glib.h" //serial lcd library
+#include <SPI.h>    //communication library
+#include <PlayingWithFusion_MAX31865.h>              // core library  Playing With Fusion MAX31865 libraries
+#include <PlayingWithFusion_MAX31865_STRUCT.h>       // struct library
+#include <PID_v1.h>	//PID library
+#include <PID_AutoTune_v0.h>
+#include <avr/eeprom.h>
+#include <dht11.h>
+void Alarm(bool on);
+void AutoTuneHelper(boolean start);
+void changeAutoTune();
+void DisplayTemp(double tAvg);
+double Fahrenheit(double celsius);
+double Kelvin(double celsius);
+void RTDDEBUG(void);
+void SerialSend();
+void SendPlotData();
+void SerialReceive();
+void SetupAlarm();
+void SetupAutoTune(void);
+void SetupPID(void);
+void SetupSPI(void);
+void ReadVars(void);
+void WriteVars(void);
+void setup(void);
+void AlarmCheck(double t);
+void loop(void);
+#line 1 "src/datajr0.0.1.ino"
 /***************************************************************************
 * Processor/Platform: Arduino MEGA 2560
 * Development Environment: Arduino 1.0.6
@@ -28,14 +57,14 @@
 *    5V            5V            -->  Vin (supply with same voltage as Arduino I/O, 5V)
 ***************************************************************************/
  
-#include "U8glib.h" //serial lcd library
-#include <SPI.h>    //communication library
-#include <PlayingWithFusion_MAX31865.h>              // core library  Playing With Fusion MAX31865 libraries
-#include <PlayingWithFusion_MAX31865_STRUCT.h>       // struct library
-#include <PID_v1.h>	//PID library
-#include <PID_AutoTune_v0.h>
-#include <avr/eeprom.h>
-#include <dht11.h>
+//#include "U8glib.h" //serial lcd library
+//#include <SPI.h>    //communication library
+//#include <PlayingWithFusion_MAX31865.h>              // core library  Playing With Fusion MAX31865 libraries
+//#include <PlayingWithFusion_MAX31865_STRUCT.h>       // struct library
+//#include <PID_v1.h>	//PID library
+//#include <PID_AutoTune_v0.h>
+//#include <avr/eeprom.h>
+//#include <dht11.h>
 #define RelayPin 44
 #define ALARM_PIN 8
 #define DHT11PIN 2
@@ -78,8 +107,8 @@ unsigned long now = millis();
 int tempTemp = 0;
 double tempAvg = 0;
 double tmp, tempIn, runningAvg;
-int multiSample = 100;
-String outputOn;
+int multiSample = WindowSize;
+String outputOn = "off";
 bool TIMEOUT = false;
 double hAlarm = 1000;
 double lAlarm = -1000;
@@ -197,17 +226,6 @@ void RTDDEBUG(void){
 void SerialSend(){
     digitalWrite(22, HIGH);
     static int t;
-	/*Serial1.println("#");
-	Serial1.print("Target:");Serial1.print(Setpoint); Serial1.print(" ");
-	Serial1.print("Temp(C):");Serial1.print(Input); Serial1.print(" ");
-	Serial1.print(Output);Serial1.print("/");Serial1.print(WindowSize); Serial1.print(" ");
-	if(tuning){
-		Serial1.println("*TUNING MODE*");
-	} else {
-		Serial1.print("P:");Serial1.print(myPID.GetKp());Serial1.print(" ");
-		Serial1.print("I:");Serial1.print(myPID.GetKi());Serial1.print(" ");
-		Serial1.print("D:");Serial1.print(myPID.GetKd());Serial1.println();
-	}*/
     (tuning)?t = 1:t = 0;
     Serial1.println("#");
     Serial1.println(Setpoint);
@@ -223,8 +241,6 @@ void SerialSend(){
     Serial1.println(t);
     Serial1.println("{");
     Serial1.println((double)DHT11.temperature);
-    Serial1.println("_");
-    Serial1.println(outputOn);
 	Serial1.flush();
     digitalWrite(22, LOW);
 }
@@ -399,6 +415,25 @@ void AlarmCheck(double t)
         Alarm(false);
     }
 }
+
+void OutputCheck(void){
+	if(Output > millis() - windowStartTime && Output > 1000 && outputOn == "off"){
+        outputOn = "on";
+        digitalWrite(RelayPin,HIGH);
+        digitalWrite(22, HIGH);
+        Serial1.println("_");
+        Serial1.println(outputOn);
+        digitalWrite(22, LOW);
+    }
+	if(Output < millis() - windowStartTime && outputOn == "on"){
+        outputOn = "off";
+        digitalWrite(RelayPin,LOW);
+        digitalWrite(22, HIGH);
+        Serial1.println("_");
+        Serial1.println(outputOn);
+        digitalWrite(22, LOW);
+    }
+}
     
 void loop(void) {
 	u8g.firstPage();  /***<-- DONT MOVE THIS??***/
@@ -442,15 +477,8 @@ void loop(void) {
 		if(millis() - windowStartTime>WindowSize){ //time to shift the Relay Window
 			windowStartTime += WindowSize;
 		}
-			
-		if(Output > millis() - windowStartTime && Output > 1000){
-            outputOn = "on";
-			digitalWrite(RelayPin,HIGH);
-		}
-		else{
-            outputOn = "off";
-			digitalWrite(RelayPin,LOW);
-		}
+		
+        OutputCheck();
  
 		if(tempTemp > multiSample){
 			tempAvg = tempAvg / tempTemp;
