@@ -207,7 +207,7 @@ class plotlyThread (threading.Thread):
                 screen.addstr(3, 16, "%.3f" % (float(aTemp)/10), curses.A_REVERSE)
                 screen.addstr(5, 16, str(aHum), curses.A_REVERSE)
                 screen.addstr(7, 16, str(aAmbient), curses.A_REVERSE)
-                screen.addstr(9, 16, aCont, curses.A_REVERSE)
+                screen.addstr(9, 16, str(aCont), curses.A_REVERSE)
                 screen.addstr(11,16, "N/A", curses.A_REVERSE)
                 screen.addstr(13,16, "N/A", curses.A_REVERSE)
                 
