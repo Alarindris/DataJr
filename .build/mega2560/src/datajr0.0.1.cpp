@@ -29,35 +29,6 @@ void AlarmCheck(double t);
 void OutputCheck(void);
 void loop(void);
 #line 1 "src/datajr0.0.1.ino"
-//#include <Arduino.h>
-//#include "U8glib.h" //serial lcd library
-//#include <SPI.h>    //communication library
-//#include <PlayingWithFusion_MAX31865.h>              // core library  Playing With Fusion MAX31865 libraries
-//#include <PlayingWithFusion_MAX31865_STRUCT.h>       // struct library
-//#include <PID_v1.h>	//PID library
-//#include <PID_AutoTune_v0.h>
-//#include <avr/eeprom.h>
-//#include <dht11.h>
-void Alarm(bool on);
-void AutoTuneHelper(boolean start);
-void changeAutoTune();
-void DisplayTemp(double tAvg);
-double Fahrenheit(double celsius);
-double Kelvin(double celsius);
-void RTDDEBUG(void);
-void SerialSend();
-void SendPlotData();
-void SerialReceive();
-void SetupAlarm();
-void SetupAutoTune(void);
-void SetupPID(void);
-void SetupSPI(void);
-void ReadVars(void);
-void WriteVars(void);
-void setup(void);
-void AlarmCheck(double t);
-void loop(void);
-#line 1 "src/datajr0.0.1.ino"
 /***************************************************************************
 * Processor/Platform: Arduino MEGA 2560
 * Development Environment: Arduino 1.0.6
@@ -87,7 +58,8 @@ void loop(void);
 *    GND           GND           -->  GND
 *    5V            5V            -->  Vin (supply with same voltage as Arduino I/O, 5V)
 ***************************************************************************/
- 
+
+//#include <Arduino.h>
 //#include "U8glib.h" //serial lcd library
 //#include <SPI.h>    //communication library
 //#include <PlayingWithFusion_MAX31865.h>              // core library  Playing With Fusion MAX31865 libraries
@@ -96,9 +68,11 @@ void loop(void);
 //#include <PID_AutoTune_v0.h>
 //#include <avr/eeprom.h>
 //#include <dht11.h>
+
 #define RelayPin 44
 #define ALARM_PIN 8
 #define DHT11PIN 2
+#define BAUD 115200
 
 /*** DHT11 vars ***/
 dht11 DHT11;
@@ -215,6 +189,8 @@ double Kelvin(double celsius){
 	return celsius + 273.15;
 }
 
+void(* resetFunc) (void) = 0;//declare reset function at address 0
+
 void RTDDEBUG(void){
 		Serial1.print("RTD Fault, register: ");
 		do{
@@ -286,25 +262,26 @@ void SendPlotData(){
 }
  
 void SerialReceive(){
-	String inputString;
 	char inChar;
-	if(Serial1.available() > 0)
-	{   
+	while(Serial1.available() > 4){   
         digitalWrite(23, HIGH);
+        String inputString;
 		inChar = char(Serial1.read());
-		//Serial1.println("#");
-		//Serial1.print("received");
-		//Serial1.println(inChar);
+
 		if(inChar > 0){
-			while(inChar!= '\n'){
+			while(inChar != '\n'){
 				inputString += inChar;
 				inChar = char(Serial1.read());
 			}
+            inChar = 0;
+            
 			if(inputString == "s"){
 				inputString = "";
-				while (Serial1.available() > 0){
-                    inChar = char(Serial1.read());
+       
+                inChar = char(Serial1.read());
+				while (inChar != '\n'){
                     inputString += inChar;
+                    inChar = char(Serial1.read());
 				}
 				Setpoint = atof(inputString.c_str());
 			}
@@ -356,9 +333,7 @@ void SerialReceive(){
                 Alarm(false);
             }
             WriteVars();
-            
-            Serial1.println("");
-            
+             
 		}
         digitalWrite(23, LOW);
     } 
@@ -425,7 +400,7 @@ void WriteVars(void){
 /******************************==MAIN_LOOP==******************************/
 void setup(void) {
     ReadVars();
-	Serial1.begin(115200);
+	Serial1.begin(BAUD);
 	SetupPID();
 	SetupAutoTune();
 	SetupSPI();
@@ -434,8 +409,7 @@ void setup(void) {
     pinMode(23, OUTPUT); //serial in
 }
  	
-void AlarmCheck(double t)
-{
+void AlarmCheck(double t){
     if(t > hAlarm){
         Alarm(true);
     }

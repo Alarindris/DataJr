@@ -11,6 +11,7 @@ import atexit
 import sys
 
 def exit():
+    ser.close()
     curses.nocbreak()
     screenstd.keypad(0)
     curses.echo()
@@ -18,6 +19,7 @@ def exit():
     print "Exit successful."
 atexit.register(exit)
 
+BAUD = 115200
 screenWidth = 80
 screenHeight = 24
 screenstd = curses.initscr()
@@ -33,7 +35,7 @@ win = curses.newwin(1,w,0,0)
 screen = curses.newwin((h-2),w,1,0)
 screen2= curses.newwin((h-2),w,1,0)
 bottomWin = curses.newwin((1),w,h,0)
-ser = serial.Serial('/dev/ttyAMA0', 115200, timeout=3)
+ser = serial.Serial('/dev/ttyAMA0', BAUD, timeout=3)
 
 '''Global vars'''
 
@@ -315,7 +317,9 @@ class uiThread (threading.Thread):
                                 screen.refresh()
                                 eventstr = screen.getstr()
                                 ser.write("s\n")
-                                ser.write(eventstr + "\n")
+                                ser.write(eventstr)
+                                ser.write("\n")
+                                ser.flush()
                             elif x == ord('3'):
                                 screen.erase()
                                 screen.border(0)
