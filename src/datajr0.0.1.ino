@@ -49,6 +49,7 @@ _ control       95
 [ lAlarm        91
 ] alarmstate    93
 { ambienttemp   123
+? status        63
 **************************************************************/
 #define SETPOINT    115
 #define INPUT       94
@@ -56,7 +57,8 @@ _ control       95
 #define PGAIN       112
 #define IGAIN       105
 #define DGAIN       100
-
+#define TUNING      41
+#define STATUS      63
 
 #include <Arduino.h>
 #include "U8glib.h" //serial lcd library
@@ -93,7 +95,6 @@ double kpmodel=1.5, taup=100, theta[50];
 double outputStart=0;
 double aTuneStep=WindowSize/2, aTuneNoise=.02, aTuneStartValue=WindowSize/2;
 unsigned int aTuneLookBack=20;
-boolean tuning = false;
 unsigned long  modelTime, serialTime;
 PID_ATune aTune(&vars[INPUT], &vars[OUTPUT]);
  
@@ -135,7 +136,7 @@ void AutoTuneHelper(boolean start){
 }
 
 void changeAutoTune(){
- if(!tuning)
+ if(!vars[TUNING] > 0)
   {
     //Set the output to the desired starting frequency.
     vars[OUTPUT]=aTuneStartValue;
@@ -143,12 +144,12 @@ void changeAutoTune(){
     aTune.SetOutputStep(aTuneStep);
     aTune.SetLookbackSec((int)aTuneLookBack);
     AutoTuneHelper(true);
-    tuning = true;
+    vars[TUNING] = 1;
   }
   else
   { //cancel autotune
     aTune.Cancel();
-    tuning = false;
+    vars[TUNING] = 0;
     AutoTuneHelper(false);
   }
 }
@@ -239,7 +240,7 @@ void SendPlotData(){
 void SerialSend(){
     digitalWrite(22, HIGH);
     static int t;
-    (tuning)?t = 1:t = 0;
+    (vars[TUNING] > 0)?t = 1:t = 0;
     Serial1.println("#");
     Serial1.println(vars[SETPOINT]);
     Serial1.println("}");
@@ -254,6 +255,8 @@ void SerialSend(){
     Serial1.println(t);
     Serial1.println("{");
     Serial1.println((double)DHT11.temperature);
+    Serial1.println(")");
+    Serial1.println(vars[TUNING]);
 	Serial1.flush();
     digitalWrite(22, LOW);
 }
@@ -348,10 +351,10 @@ void SetupAlarm(){
 
 void SetupAutoTune(void){
 
-	if(tuning){
-		tuning=false;
+	if(vars[TUNING] > 0){
+		vars[TUNING] = 0;
 		changeAutoTune();
-		tuning=true;
+		vars[TUNING] = 1;
 	}
   
 	serialTime = 0;
@@ -394,6 +397,7 @@ void SetupVars(void){
     vars[SETPOINT] = 24;
     vars[OUTPUT] = 0;
     vars[INPUT] = 22;
+    vars[TUNING] = 0;
 };
 
 void WriteVars(void){
@@ -471,12 +475,12 @@ void loop(void) {
         
         vars[INPUT] = runningAvg;
 		
-		if(tuning){
+		if(vars[TUNING] > 0){
 			byte val = (aTune.Runtime());
-			if (val!=0){
-				tuning = false;
+			if (val! = 0){
+				vars[TUNING] = 0;
 			}
-			if(!tuning){ //we're done, set the tuning parameters
+			if(!vars[TUNING] > 0){ //we're done, set the tuning parameters
 				kp = aTune.GetKp();
 				ki = aTune.GetKi();
 				kd = aTune.GetKd();
