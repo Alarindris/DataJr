@@ -27,6 +27,36 @@
 *    GND           GND           -->  GND
 *    5V            5V            -->  Vin (supply with same voltage as Arduino I/O, 5V)
 ***************************************************************************/
+double vars[128] = {0};
+/*************************************************************
+variable table
+
+^ PIDIn         94
+@ PIDOut        64
+# setpoint      35
+} humidity      125
+$ P             36
+% I             37
+! D             33
+& pout          38
+* iout          42
+( dout          40
+) isTuning      41
+_ control       95
++ mode          43
+- override      45
+= hAlarm        61
+[ lAlarm        91
+] alarmstate    93
+{ ambienttemp   123
+**************************************************************/
+#define SETPOINT    115
+#define INPUT       94
+#define OUTPUT      64
+#define PGAIN       112
+#define IGAIN       105
+#define DGAIN       100
+
 
 #include <Arduino.h>
 #include "U8glib.h" //serial lcd library
@@ -41,7 +71,8 @@
 #define RelayPin 44
 #define ALARM_PIN 8
 #define DHT11PIN 2
-#define BAUD 115200
+#define SERIAL_BAUD 115200
+#define SERIAL_MIN_BITS 4
 
 /*** DHT11 vars ***/
 dht11 DHT11;
@@ -52,11 +83,8 @@ U8GLIB_ST7920_128X64 u8g(13, 11, 12, U8G_PIN_NONE);   	//create lcd display vari
 /*** PID vars ***/
 int WindowSize = 10000;			//PID variables
 unsigned long windowStartTime;
-double 	Input = 22,
-		Output = 0, 
-		Setpoint = 24;
 int direction = DIRECT;
-PID myPID(&Input, &Output, &Setpoint,19432.63, 807.59,0, direction); 	// create PID variable  REVERSE = COOL  DIRECT = HEAT
+PID myPID(&vars[INPUT], &vars[OUTPUT], &vars[SETPOINT],19432.63, 807.59,0, direction); 	// create PID variable  REVERSE = COOL  DIRECT = HEAT
  
 /*** Auto-tune vars ***/
 byte ATuneModeRemember=2;
@@ -67,7 +95,7 @@ double aTuneStep=WindowSize/2, aTuneNoise=.02, aTuneStartValue=WindowSize/2;
 unsigned int aTuneLookBack=20;
 boolean tuning = false;
 unsigned long  modelTime, serialTime;
-PID_ATune aTune(&Input, &Output);
+PID_ATune aTune(&vars[INPUT], &vars[OUTPUT]);
  
 /*** MAX31865 vars ***/
 static struct var_max31865 RTD_CH0;
@@ -110,7 +138,7 @@ void changeAutoTune(){
  if(!tuning)
   {
     //Set the output to the desired starting frequency.
-    Output=aTuneStartValue;
+    vars[OUTPUT]=aTuneStartValue;
     aTune.SetNoiseBand(aTuneNoise);
     aTune.SetOutputStep(aTuneStep);
     aTune.SetLookbackSec((int)aTuneLookBack);
@@ -129,7 +157,7 @@ void DisplayTemp(double tAvg){
     double Ftemp = (tAvg * 9) / 5 + 32;
 	char tempString[10];
 	int gapT = millis()-windowStartTime;
-	//double outTemp = Output;
+	//double outTemp = vars[OUTPUT];
 	dtostrf(tAvg, 3, 3, tempString);
 	
     int chk = DHT11.read(DHT11PIN);
@@ -137,13 +165,13 @@ void DisplayTemp(double tAvg){
 	do{
         u8g.setFont(u8g_font_fub14);
         u8g.setPrintPos(0, 16);
-        u8g.print("Target:" + String(Setpoint));
+        u8g.print("Target:" + String(vars[SETPOINT]));
         u8g.setPrintPos(0, 35);
         u8g.print("C:" + String(tempString));
         /*u8g.setPrintPos(0, 30);
         u8g.print(String(Ftemp));*/
         u8g.setPrintPos(0, 54);
-        u8g.print("Output:" + String(outputOn));
+        u8g.print("vars[OUTPUT]:" + String(outputOn));
 		/*u8g.print(String((double)DHT11.humidity));
         u8g.setPrintPos(0,55);
 		u8g.print(gapT);*/
@@ -199,12 +227,21 @@ void RTDDEBUG(void){
 	  // end of fault handling	
  }
 
+void SendPlotData(){
+    digitalWrite(22, HIGH);
+	Serial1.println("^");
+    Serial1.println(vars[INPUT]*10);
+	Serial1.println(vars[OUTPUT]);
+	Serial1.flush();
+    digitalWrite(22, LOW);
+}
+
 void SerialSend(){
     digitalWrite(22, HIGH);
     static int t;
     (tuning)?t = 1:t = 0;
     Serial1.println("#");
-    Serial1.println(Setpoint);
+    Serial1.println(vars[SETPOINT]);
     Serial1.println("}");
     Serial1.println((double)DHT11.humidity);
     Serial1.println("$");
@@ -220,91 +257,88 @@ void SerialSend(){
 	Serial1.flush();
     digitalWrite(22, LOW);
 }
-
-void SendPlotData(){
-    digitalWrite(22, HIGH);
-	Serial1.println("^");
-    Serial1.println(Input*10);
-	Serial1.println(Output);
-	Serial1.flush();
-    digitalWrite(22, LOW);
-}
  
 void SerialReceive(){
-	char inChar;
-	while(Serial1.available() > 4){   
+	/*
+    while(Serial1.available() > SERIAL_MIN_BITS){
         digitalWrite(23, HIGH);
         String inputString;
-		inChar = char(Serial1.read());
+        char varVal, inChar, varIndex;
+        
+        varIndex = char(Serial1.read());
+        
+        while(inChar != '\n'){
+            inChar = char(Serial1.read());
+        }
+        inChar = 0;
+        
+        inChar = char(Serial1.read());      
+        while(inChar != '\n'){
+            inputString += inChar;
+			inChar = char(Serial1.read()); 
+        }
 
-		if(inChar > 0){
-			while(inChar != '\n'){
-				inputString += inChar;
-				inChar = char(Serial1.read());
-			}
-            inChar = 0;
-            
-			if(inputString == "s"){
-				inputString = "";
+        vars[varIndex] = atof(inputString.c_str());
+        
+        switch(varIndex){
+            case PGAIN:
+                myPID.SetP(vars[varIndex]);
+                break;
+            case IGAIN:
+                myPID.SetI(vars[varIndex]);
+                break;
+            case DGAIN:
+                myPID.SetD(vars[varIndex]);
+                break;
+        }
+        WriteVars();
+        
+        digitalWrite(23, LOW);
+    }*/
+
+    char inChar;
+
+	while(Serial1.available() > SERIAL_MIN_BITS){
+        digitalWrite(23, HIGH);
+        String inputString;
+        char varIndex = 0;
+        
+        varIndex = char(Serial1.read());
+      
+        int intIndex = varIndex;
+		
+        while(inChar != '\n'){
+			inputString += inChar;
+			inChar = char(Serial1.read());
+		}
+        inChar = 0;
+
+		if(varIndex > 1){
+			inputString = "";
        
+            inChar = char(Serial1.read());
+			while (inChar != '\n'){
+                inputString += inChar;
                 inChar = char(Serial1.read());
-				while (inChar != '\n'){
-                    inputString += inChar;
-                    inChar = char(Serial1.read());
-				}
-				Setpoint = atof(inputString.c_str());
-			}
-			else if(inputString == "p" || inputString == "P"){
-				inputString = "";
-				inChar = char(Serial1.read());
-				while (inChar != '\n'){
-					inputString += inChar;
-					inChar = char(Serial1.read());
-				}
-				myPID.SetP(atof(inputString.c_str()));
-			}
-			else if(inputString == "i" || inputString == "I"){
-				inputString = "";
-				inChar = char(Serial1.read());
-				while (inChar != '\n'){
-					inputString += inChar;
-					inChar = char(Serial1.read());
-				}
-				myPID.SetI(atof(inputString.c_str()));
-			}
-			else if(inputString == "d" || inputString == "D"){
-				inputString = "";
-				inChar = char(Serial1.read());
-				while (inChar != '\n'){
-					inputString += inChar;
-					inChar = char(Serial1.read());
-				}
-				myPID.SetD(atof(inputString.c_str()));
-			}
-			else if(inputString == "a" || inputString == "A"){
-				inputString = "";
-				inChar = char(Serial1.read());
-				while (inChar != '\n'){
-					inputString += inChar;
-					inChar = char(Serial1.read());
-				}
-				if(inputString == "y"){
-					changeAutoTune();
-				}
-				else{
-					changeAutoTune();
-				}
-			}
-            else if(inputString == "aon"){
-                Alarm(true);
-			}
-            else if(inputString == "aoff"){
-                Alarm(false);
             }
+			vars[intIndex] = atof(inputString.c_str());
+
+            switch(varIndex){
+                case PGAIN:
+                    myPID.SetP(vars[varIndex]);
+                    break;
+                case IGAIN:
+                    myPID.SetI(vars[varIndex]);
+                    break;
+                case DGAIN:
+                    myPID.SetD(vars[varIndex]);
+                    break;
+            }
+
             WriteVars();
-             
 		}
         digitalWrite(23, LOW);
+
     } 
 }
 
@@ -352,24 +386,31 @@ void ReadVars(void){
     eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
     myPID.SetTunings(settings.p, settings.i, settings.d);
     myPID.SetControllerDirection(settings.dir);
-    Setpoint = settings.set;
+    vars[SETPOINT] = settings.set;
     //WindowSize = settings.winSize;
 }
+
+void SetupVars(void){
+    vars[SETPOINT] = 24;
+    vars[OUTPUT] = 0;
+    vars[INPUT] = 22;
+};
 
 void WriteVars(void){
     settings.p = myPID.GetKp();
     settings.i = myPID.GetKi();
     settings.d = myPID.GetKd();
     settings.dir = direction;
-    settings.set = Setpoint;
+    settings.set = vars[SETPOINT];
     settings.winSize = WindowSize;
     eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
 }
 
 /******************************==MAIN_LOOP==******************************/
 void setup(void) {
+    SetupVars();
     ReadVars();
-	Serial1.begin(BAUD);
+	Serial1.begin(SERIAL_BAUD);
 	SetupPID();
 	SetupAutoTune();
 	SetupSPI();
@@ -391,7 +432,7 @@ void AlarmCheck(double t){
 }
 
 void OutputCheck(void){
-	if(Output > millis() - windowStartTime && Output > 1000 && outputOn == "off"){
+	if(vars[OUTPUT] > millis() - windowStartTime && vars[OUTPUT] > 1000 && outputOn == "off"){
         outputOn = "on";
         digitalWrite(RelayPin,HIGH);
         digitalWrite(22, HIGH);
@@ -399,7 +440,7 @@ void OutputCheck(void){
         Serial1.println(outputOn);
         digitalWrite(22, LOW);
     }
-	if(Output < millis() - windowStartTime && outputOn == "on"){
+	if(vars[OUTPUT] < millis() - windowStartTime && outputOn == "on"){
         outputOn = "off";
         digitalWrite(RelayPin,LOW);
         digitalWrite(22, HIGH);
@@ -428,7 +469,7 @@ void loop(void) {
 		
         AlarmCheck(runningAvg);
         
-        Input = runningAvg;
+        vars[INPUT] = runningAvg;
 		
 		if(tuning){
 			byte val = (aTune.Runtime());

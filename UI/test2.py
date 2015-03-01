@@ -32,8 +32,14 @@ screenstd.keypad(1)
 curses.curs_set(0)
 h, w = screenstd.getmaxyx()
 win = curses.newwin(1,w,0,0)
+win.erase()
+win.refresh()
+win.clear()
 screen = curses.newwin((h-2),w,1,0)
 screen2= curses.newwin((h-2),w,1,0)
+screen2.erase()
+screen2.refresh()
+screen2.clear()
 bottomWin = curses.newwin((1),w,h,0)
 ser = serial.Serial('/dev/ttyAMA0', BAUD, timeout=3)
 
@@ -113,7 +119,14 @@ def getSerialLine():
     while result == "":
         result = ser.readline().strip()
     return result
-    
+
+def writeSerialLine(token):
+    eventstr = screen.getstr()
+    ser.write(token)
+    ser.write("\n")
+    ser.write(eventstr)
+    ser.write("\n")
+    ser.flush()
 
 class plotlyThread (threading.Thread):
     def __init__(self, threadID, name, counter):
@@ -242,10 +255,12 @@ class uiThread (threading.Thread):
         display = False
         exitflag = 0
         x = 0
-
+        
+        screen.erase()
+        screen.refresh()
         while True:
             screen.clear()
-            screen.border(0, curses.color_pair(1))
+            screen.border(0)
             screen.addstr(2, 4, "***Main Menu***", curses.color_pair(1))
             screen.addstr(4, 8, "Setup", curses.color_pair(1))
             screen.addstr(5, 8, "System", curses.color_pair(1))
@@ -261,7 +276,7 @@ class uiThread (threading.Thread):
             x = screen.getch()
             if x == ord('1'):
                 while True:
-                    screen.erase()
+                    screen.clear()
                     screen.border(0)
                     screen.addstr(2, 2, "***Setup***")
                     screen.addstr(4, 4, "1 - Tuning parameters")
@@ -315,29 +330,25 @@ class uiThread (threading.Thread):
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new setpoint:")
                                 screen.refresh()
-                                eventstr = screen.getstr()
-                                ser.write("s\n")
-                                ser.write(eventstr)
-                                ser.write("\n")
-                                ser.flush()
+                                writeSerialLine("s")
                             elif x == ord('3'):
                                 screen.erase()
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new proportional gain:")
                                 screen.refresh()
-                                x = screen.getch()
+                                writeSerialLine("p")
                             elif x == ord('4'):
                                 screen.erase()
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new integral gain:")
                                 screen.refresh()
-                                x = screen.getch()
+                                writeSerialLine("i")
                             elif x == ord('5'):
                                 screen.erase()
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new derivative gain:")
                                 screen.refresh()
-                                x = screen.getch()
+                                writeSerialLine("d")
                             elif x == ord('6'):
                                 screen.erase()
                                 screen.border(0)
