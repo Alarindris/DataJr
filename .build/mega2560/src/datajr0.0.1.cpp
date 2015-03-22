@@ -62,7 +62,6 @@ void loop(void);
 double vars[128] = {0};
 /*************************************************************
 variable table
-
 ^ PIDIn         94
 @ PIDOut        64
 # setpoint      35
@@ -81,14 +80,18 @@ _ control       95
 [ lAlarm        91
 ] alarmstate    93
 { ambienttemp   123
+? status        63
 **************************************************************/
 #define SETPOINT    115
 #define INPUT       94
 #define OUTPUT      64
-#define PGAIN       112
-#define IGAIN       105
-#define DGAIN       100
-
+#define PGAIN       36
+#define IGAIN       37
+#define DGAIN       33
+#define TUNING      41
+#define STATUS      63
+#define HALARM      61      
+#define LALARM      91
 
 //#include <Arduino.h>
 //#include "U8glib.h" //serial lcd library
@@ -123,9 +126,8 @@ byte ATuneModeRemember=2;
 double kp=4,ki=2,kd=0;
 double kpmodel=1.5, taup=100, theta[50];
 double outputStart=0;
-double aTuneStep=WindowSize/2, aTuneNoise=.02, aTuneStartValue=WindowSize/2;
-unsigned int aTuneLookBack=20;
-boolean tuning = false;
+double aTuneStep=5000, aTuneNoise=.02, aTuneStartValue=WindowSize/2;
+unsigned int aTuneLookBack=300;
 unsigned long  modelTime, serialTime;
 PID_ATune aTune(&vars[INPUT], &vars[OUTPUT]);
  
@@ -144,18 +146,24 @@ double tmp, tempIn, runningAvg;
 int multiSample = WindowSize;
 String outputOn = "off";
 bool TIMEOUT = false;
-double hAlarm = 1000;
-double lAlarm = -1000;
 bool alarmOn = false;
+bool lalarmOn = false;
+bool halarmOn = false;
 
 void Alarm(bool on){
     if (on){
-        digitalWrite(ALARM_PIN, HIGH);
-        alarmOn = true;
+        if(alarmOn == false){
+            digitalWrite(ALARM_PIN, HIGH);
+            alarmOn = true;
+        }
     }
-    else{    
-        digitalWrite(ALARM_PIN, LOW);
-        alarmOn = false;
+    else{
+        if(alarmOn == true){
+            digitalWrite(ALARM_PIN, LOW);
+            alarmOn = false;
+            lalarmOn = false;
+            halarmOn = false;
+        }
     }
 }
 
@@ -167,20 +175,20 @@ void AutoTuneHelper(boolean start){
 }
 
 void changeAutoTune(){
- if(!tuning)
+ if(vars[TUNING] > 0.5)
   {
     //Set the output to the desired starting frequency.
     vars[OUTPUT]=aTuneStartValue;
     aTune.SetNoiseBand(aTuneNoise);
-    aTune.SetOutputStep(aTuneStep);
+    aTune.SetOutputStep(5000);
     aTune.SetLookbackSec((int)aTuneLookBack);
     AutoTuneHelper(true);
-    tuning = true;
+    vars[TUNING] = 1;
   }
   else
   { //cancel autotune
     aTune.Cancel();
-    tuning = false;
+    vars[TUNING] = 0;
     AutoTuneHelper(false);
   }
 }
@@ -199,11 +207,11 @@ void DisplayTemp(double tAvg){
         u8g.setPrintPos(0, 16);
         u8g.print("Target:" + String(vars[SETPOINT]));
         u8g.setPrintPos(0, 35);
-        u8g.print("C:" + String(tempString));
+        u8g.print("Temp:" + String(tempString));
         /*u8g.setPrintPos(0, 30);
         u8g.print(String(Ftemp));*/
         u8g.setPrintPos(0, 54);
-        u8g.print("vars[OUTPUT]:" + String(outputOn));
+        u8g.print("Output:" + String(outputOn));
 		/*u8g.print(String((double)DHT11.humidity));
         u8g.setPrintPos(0,55);
 		u8g.print(gapT);*/
@@ -270,8 +278,10 @@ void SendPlotData(){
 
 void SerialSend(){
     digitalWrite(22, HIGH);
-    static int t;
-    (tuning)?t = 1:t = 0;
+    static int t, h, l;
+    String alarm;
+    (vars[TUNING] > 0.5)?t = 1:t = 0;
+    (halarmOn || lalarmOn) ? alarm = "On": alarm = "Off";
     Serial1.println("#");
     Serial1.println(vars[SETPOINT]);
     Serial1.println("}");
@@ -283,10 +293,16 @@ void SerialSend(){
     Serial1.println("!");
     Serial1.println(myPID.GetKd());
     Serial1.println(")");
-    Serial1.println(t);
+    Serial1.println((double)vars[TUNING]);
     Serial1.println("{");
     Serial1.println((double)DHT11.temperature);
-	Serial1.flush();
+    Serial1.println("=");
+    Serial1.println((double)vars[HALARM]);
+    Serial1.println("[");
+    Serial1.println((double)vars[LALARM]);
+    Serial1.println("]");
+    Serial1.println(alarm);
+	//Serial1.flush();
     digitalWrite(22, LOW);
 }
  
@@ -309,7 +325,6 @@ void SerialReceive(){
             inputString += inChar;
 			inChar = char(Serial1.read()); 
         }
-
         vars[varIndex] = atof(inputString.c_str());
         
         switch(varIndex){
@@ -354,17 +369,19 @@ void SerialReceive(){
                 inChar = char(Serial1.read());
             }
 			vars[intIndex] = atof(inputString.c_str());
-
+            double varTemp = vars[intIndex];
             switch(varIndex){
                 case PGAIN:
-                    myPID.SetP(vars[varIndex]);
+                    myPID.SetP(varTemp);
                     break;
                 case IGAIN:
-                    myPID.SetI(vars[varIndex]);
+                    myPID.SetI(varTemp);
                     break;
                 case DGAIN:
-                    myPID.SetD(vars[varIndex]);
+                    myPID.SetD(varTemp);
                     break;
+                case TUNING:
+                    changeAutoTune();
             }
 
             WriteVars();
@@ -380,10 +397,10 @@ void SetupAlarm(){
 
 void SetupAutoTune(void){
 
-	if(tuning){
-		tuning=false;
+	if(vars[TUNING] > 0.5){
+		vars[TUNING] = 0;
 		changeAutoTune();
-		tuning=true;
+		vars[TUNING] = 1;
 	}
   
 	serialTime = 0;
@@ -410,7 +427,7 @@ void SetupSPI(void){
 }
 
 struct settings_t{
-    double set, p, i, d;
+    double set, p, i, d, hA, lA;
     int winSize, dir;
 }settings;
 
@@ -419,6 +436,8 @@ void ReadVars(void){
     myPID.SetTunings(settings.p, settings.i, settings.d);
     myPID.SetControllerDirection(settings.dir);
     vars[SETPOINT] = settings.set;
+    vars[HALARM] = settings.hA;
+    vars[LALARM] = settings.lA;
     //WindowSize = settings.winSize;
 }
 
@@ -426,6 +445,9 @@ void SetupVars(void){
     vars[SETPOINT] = 24;
     vars[OUTPUT] = 0;
     vars[INPUT] = 22;
+    vars[TUNING] = 0;
+    vars[HALARM] = 24.0;
+    vars[LALARM] = 23.0;
 };
 
 void WriteVars(void){
@@ -435,6 +457,8 @@ void WriteVars(void){
     settings.dir = direction;
     settings.set = vars[SETPOINT];
     settings.winSize = WindowSize;
+    settings.hA = vars[HALARM];
+    settings.lA = vars[LALARM];
     eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
 }
 
@@ -452,11 +476,13 @@ void setup(void) {
 }
  	
 void AlarmCheck(double t){
-    if(t > hAlarm){
+    if(t > vars[HALARM]){
         Alarm(true);
+        halarmOn = true;
     }
-    else if(t < lAlarm){
+    else if(t < vars[LALARM]){
         Alarm(true);
+        lalarmOn = false;
     }
     else if(alarmOn == true){
         Alarm(false);
@@ -469,7 +495,7 @@ void OutputCheck(void){
         digitalWrite(RelayPin,HIGH);
         digitalWrite(22, HIGH);
         Serial1.println("_");
-        Serial1.println(outputOn);
+        Serial1.println("on ");
         digitalWrite(22, LOW);
     }
 	if(vars[OUTPUT] < millis() - windowStartTime && outputOn == "on"){
@@ -477,7 +503,7 @@ void OutputCheck(void){
         digitalWrite(RelayPin,LOW);
         digitalWrite(22, HIGH);
         Serial1.println("_");
-        Serial1.println(outputOn);
+        Serial1.println("off");
         digitalWrite(22, LOW);
     }
 }
@@ -499,16 +525,16 @@ void loop(void) {
 		tempAvg += tmp;
 		runningAvg = tempAvg / tempTemp;
 		
-        AlarmCheck(runningAvg);
+        
         
         vars[INPUT] = runningAvg;
 		
-		if(tuning){
+		if(vars[TUNING] > 0.5){
 			byte val = (aTune.Runtime());
-			if (val!=0){
-				tuning = false;
+			if (val != 0){
+				vars[TUNING] = 0;
 			}
-			if(!tuning){ //we're done, set the tuning parameters
+			if(!(vars[TUNING] > 0.5)){ //we're done, set the tuning parameters
 				kp = aTune.GetKp();
 				ki = aTune.GetKi();
 				kd = aTune.GetKd();
@@ -530,6 +556,7 @@ void loop(void) {
 		if(tempTemp > multiSample){
 			tempAvg = tempAvg / tempTemp;
 			tempTemp = 0;
+            AlarmCheck(tempAvg);
             DisplayTemp(tempAvg);
 			SendPlotData();
 			tempAvg = 0;

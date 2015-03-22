@@ -9,9 +9,12 @@ import serial
 import curses
 import atexit
 import sys
+BAUD = 115200
+
+ser = serial.Serial('/dev/ttyAMA0', BAUD, timeout=3)
 
 def exit():
-    ser.close()
+    '''ser.close()'''
     curses.nocbreak()
     screenstd.keypad(0)
     curses.echo()
@@ -235,13 +238,17 @@ class plotlyThread (threading.Thread):
                 screen.addstr(13,40, str(aOut), curses.A_REVERSE)
                 screen.addstr(15,40, "N/A", curses.A_REVERSE)
                 
+                screen.addstr(1, 60, str(aHAlarm), curses.A_REVERSE)
+                screen.addstr(3, 60, str(aAlarm), curses.A_REVERSE)
+                screen.addstr(5, 60, str(aLAlarm), curses.A_REVERSE)
+                
                 screen.refresh()
             else:
                 win.erase()
                 win.addstr(0, 1, "Temp:      Target:      Control:")
                 win.addstr(0, 6, "%.3f" % (float(aTemp)/10), curses.A_REVERSE)
                 win.addstr(0, 19, str(aSetpoint), curses.A_REVERSE)
-                win.addstr(0, 33, str(aCont), curses.A_REVERSE)
+                win.addstr(0, 33, str(aTuning), curses.A_REVERSE)
                 win.refresh()
             
 
@@ -312,15 +319,15 @@ class uiThread (threading.Thread):
                                     
                                     x = screen.getch()
                                     if x == ord('1'):
-                                        screen.addstr(8,4,"Autotune enable (y or n)?")
-                                        screen.refresh()
-                                        screen.nodelay(0)
-                                        eventstr = screen.getstr()
-                                        ser.write("a\n")
-                                        ser.write(eventstr + "\n")
+                                        ser.write(")\n")
+                                        ser.write("1.0")
+                                        ser.write("\n")
                                         break
                                     if x == ord('2'):
-                                        break;
+                                        ser.write(")\n")
+                                        ser.write("0.03")
+                                        ser.write("\n")
+                                        break
                                     if x == ord('3'):
                                         x = 0
                                         break
@@ -336,19 +343,19 @@ class uiThread (threading.Thread):
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new proportional gain:")
                                 screen.refresh()
-                                writeSerialLine("p")
+                                writeSerialLine("$")
                             elif x == ord('4'):
                                 screen.erase()
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new integral gain:")
                                 screen.refresh()
-                                writeSerialLine("i")
+                                writeSerialLine("%")
                             elif x == ord('5'):
                                 screen.erase()
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new derivative gain:")
                                 screen.refresh()
-                                writeSerialLine("d")
+                                writeSerialLine("!")
                             elif x == ord('6'):
                                 screen.erase()
                                 screen.border(0)
