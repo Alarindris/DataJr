@@ -164,20 +164,41 @@ void changeAutoTune(){
 void DisplayTemp(double tAvg){
     double Ftemp = (tAvg * 9) / 5 + 32;
 	char tempString[10];
-	int gapT = millis()-windowStartTime;
-	dtostrf(tAvg, 3, 3, tempString);
+    int tempOut = int(vars[OUTPUT] / 100);
+	dtostrf(tAvg, 3, 2, tempString);
 	
     int chk = DHT11.read(DHT11PIN);
     
 	do{
-        u8g.setFont(u8g_font_fub14);
+        /*u8g.setFont(u8g_font_fub14);
         u8g.setPrintPos(0, 16);
         u8g.print("Target:" + String(vars[SETPOINT]));
         u8g.setPrintPos(0, 35);
         u8g.print("Temp:" + String(tempString));
         u8g.setPrintPos(0, 54);
         u8g.print("Output:" + String(outputOn));
-	}while( u8g.nextPage() );
+        */
+        
+        u8g.drawLine(0,24,128,24);
+        u8g.drawFrame(0,0,128,64);
+        u8g.setFont(u8g_font_fub35n);
+        u8g.setPrintPos(0,62);
+        u8g.print(String(tempString));
+        u8g.setFont(u8g_font_fub11);
+        u8g.setPrintPos(0, 18);
+        u8g.print(String(vars[SETPOINT]));
+        u8g.setPrintPos(48, 18);
+        u8g.print(String(tempOut));
+        u8g.setFont(u8g_font_fur20r);
+        u8g.setPrintPos(80, 22);
+        if(outputOn == "on"){
+            u8g.print("On");
+        }
+        else{
+            u8g.print("Off");
+        }
+        
+    }while( u8g.nextPage() );
 }
 
 double Fahrenheit(double celsius){
