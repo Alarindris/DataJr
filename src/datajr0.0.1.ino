@@ -148,7 +148,7 @@ void changeAutoTune(){
     //Set the output to the desired starting frequency.
     vars[OUTPUT]=aTuneStartValue;
     aTune.SetNoiseBand(aTuneNoise);
-    aTune.SetOutputStep(5000);
+    aTune.SetOutputStep(aTuneStep);
     aTune.SetLookbackSec((int)aTuneLookBack);
     AutoTuneHelper(true);
     vars[TUNING] = 1;
@@ -165,7 +165,6 @@ void DisplayTemp(double tAvg){
     double Ftemp = (tAvg * 9) / 5 + 32;
 	char tempString[10];
 	int gapT = millis()-windowStartTime;
-	//double outTemp = vars[OUTPUT];
 	dtostrf(tAvg, 3, 3, tempString);
 	
     int chk = DHT11.read(DHT11PIN);
@@ -176,13 +175,8 @@ void DisplayTemp(double tAvg){
         u8g.print("Target:" + String(vars[SETPOINT]));
         u8g.setPrintPos(0, 35);
         u8g.print("Temp:" + String(tempString));
-        /*u8g.setPrintPos(0, 30);
-        u8g.print(String(Ftemp));*/
         u8g.setPrintPos(0, 54);
         u8g.print("Output:" + String(outputOn));
-		/*u8g.print(String((double)DHT11.humidity));
-        u8g.setPrintPos(0,55);
-		u8g.print(gapT);*/
 	}while( u8g.nextPage() );
 }
 
@@ -275,41 +269,6 @@ void SerialSend(){
 }
  
 void SerialReceive(){
-	/*
-    while(Serial1.available() > SERIAL_MIN_BITS){
-        digitalWrite(23, HIGH);
-        String inputString;
-        char varVal, inChar, varIndex;
-        
-        varIndex = char(Serial1.read());
-        
-        while(inChar != '\n'){
-            inChar = char(Serial1.read());
-        }
-        inChar = 0;
-        
-        inChar = char(Serial1.read());      
-        while(inChar != '\n'){
-            inputString += inChar;
-			inChar = char(Serial1.read()); 
-        }
-        vars[varIndex] = atof(inputString.c_str());
-        
-        switch(varIndex){
-            case PGAIN:
-                myPID.SetP(vars[varIndex]);
-                break;
-            case IGAIN:
-                myPID.SetI(vars[varIndex]);
-                break;
-            case DGAIN:
-                myPID.SetD(vars[varIndex]);
-                break;
-        }
-        WriteVars();
-        
-        digitalWrite(23, LOW);
-    }*/
 
     char inChar;
 
