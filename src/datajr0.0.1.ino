@@ -166,23 +166,23 @@ void DisplayTemp(double tAvg){
 	char tempString[10];
     double tempOut = vars[OUTPUT] / 100;
 	dtostrf(tAvg, 3, 2, tempString);
-	int boxY = 64 - int(0.64 * tempOut);
+	int boxY = 60 - int(0.6 * tempOut);
     int chk = DHT11.read(DHT11PIN);
     
 	do{
-        /*u8g.setFont(u8g_font_fub14);
-        u8g.setPrintPos(0, 16);
-        u8g.print("Target:" + String(vars[SETPOINT]));
-        u8g.setPrintPos(0, 35);
-        u8g.print("Temp:" + String(tempString));
-        u8g.setPrintPos(0, 54);
-        u8g.print("Output:" + String(outputOn));
-        */
+        for(int i = 0; i < 10; i++){
+            u8g.drawPixel(111, (i * 6) + 2);
+            u8g.drawPixel(124, (i * 6) + 2);
+        }
         
-        u8g.drawLine(0,24,108,24);
-        u8g.drawFrame(0,0,128,64);
-        u8g.drawLine(108,0,108,64);
-        u8g.drawBox(108, boxY, 20, int(tempOut*0.64));
+        u8g.drawLine(0,24,107,24);
+        u8g.drawRFrame(0,0,108,64,4);
+        u8g.drawRFrame(110,0,16,64,4);
+        
+        if(int(tempOut) > 0){
+            u8g.drawRBox(112, boxY + 2, 12, int(tempOut * 0.6), 4);
+        }
+        
         u8g.setFont(u8g_font_fur30n);
         u8g.setPrintPos(3,60);
         u8g.print(String(tempString));
