@@ -164,9 +164,9 @@ void changeAutoTune(){
 void DisplayTemp(double tAvg){
     double Ftemp = (tAvg * 9) / 5 + 32;
 	char tempString[10];
-    int tempOut = int(vars[OUTPUT] / 100);
+    double tempOut = vars[OUTPUT] / 100;
 	dtostrf(tAvg, 3, 2, tempString);
-	
+	int boxY = 64 - int(0.64 * tempOut);
     int chk = DHT11.read(DHT11PIN);
     
 	do{
@@ -179,18 +179,18 @@ void DisplayTemp(double tAvg){
         u8g.print("Output:" + String(outputOn));
         */
         
-        u8g.drawLine(0,24,128,24);
+        u8g.drawLine(0,24,108,24);
         u8g.drawFrame(0,0,128,64);
-        u8g.setFont(u8g_font_fub35n);
-        u8g.setPrintPos(0,62);
+        u8g.drawLine(108,0,108,64);
+        u8g.drawBox(108, boxY, 20, int(tempOut*0.64));
+        u8g.setFont(u8g_font_fur30n);
+        u8g.setPrintPos(3,60);
         u8g.print(String(tempString));
-        u8g.setFont(u8g_font_fub11);
-        u8g.setPrintPos(0, 18);
+
+        u8g.setFont(u8g_font_fub17r);
+        u8g.setPrintPos(2, 21);
         u8g.print(String(vars[SETPOINT]));
-        u8g.setPrintPos(48, 18);
-        u8g.print(String(tempOut));
-        u8g.setFont(u8g_font_fur20r);
-        u8g.setPrintPos(80, 22);
+        u8g.setPrintPos(65, 21);
         if(outputOn == "on"){
             u8g.print("On");
         }
