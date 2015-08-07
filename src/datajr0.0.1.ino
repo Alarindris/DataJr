@@ -196,14 +196,6 @@ void DisplayTemp(double tAvg){
     }while( u8g.nextPage() );
 }
 
-double Fahrenheit(double celsius){
-	return 1.8 * celsius + 32;
-}
-
-double Kelvin(double celsius){
-	return celsius + 273.15;
-}
-
 void(* resetFunc) (void) = 0;//declare reset function at address 0
 
 void SendPlotData(){
