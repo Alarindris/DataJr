@@ -75,7 +75,7 @@ trace2 = Scatter(
 )
  
 layout = Layout(
-    title='Fishtank temperature plot',
+    title='Generator Temperature Plot',
     showlegend=True,
     autosize=True,
     width=864,
@@ -109,7 +109,7 @@ layout = Layout(
  
 fig = Figure(data=[trace1,trace2], layout=layout)
  
-print py.plot(fig, filename='Fishtank temp')
+print py.plot(fig, filename='Generator #1')
  
 i = 0
 stream = py.Stream(stream_token)

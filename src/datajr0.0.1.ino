@@ -69,16 +69,12 @@ _ control       95
 #include <PID_v1.h>	//PID library
 #include <PID_AutoTune_v0.h>
 #include <avr/eeprom.h>
-#include <dht11.h>
+
 
 #define RelayPin 44
 #define ALARM_PIN 8
-#define DHT11PIN 2
 #define SERIAL_BAUD 115200
 #define SERIAL_MIN_BITS 4
-
-/*** DHT11 vars ***/
-dht11 DHT11;
 
 /*** Display vars ***/
 U8GLIB_ST7920_128X64 u8g(13, 11, 12, U8G_PIN_NONE);   	//create lcd display variable
@@ -86,7 +82,7 @@ U8GLIB_ST7920_128X64 u8g(13, 11, 12, U8G_PIN_NONE);   	//create lcd display vari
 /*** PID vars ***/
 int WindowSize = 10000;			//PID variables
 unsigned long windowStartTime;
-int direction = DIRECT;
+int direction = REVERSE;
 PID myPID(&vars[INPUT], &vars[OUTPUT], &vars[SETPOINT],19432.63, 807.59,0, direction); 	// create PID variable  REVERSE = COOL  DIRECT = HEAT
  
 /*** Auto-tune vars ***/
@@ -94,8 +90,8 @@ byte ATuneModeRemember=2;
 double kp=4,ki=2,kd=0;
 double kpmodel=1.5, taup=100, theta[50];
 double outputStart=0;
-double aTuneStep=5000, aTuneNoise=.02, aTuneStartValue=WindowSize/2;
-unsigned int aTuneLookBack=300;
+double aTuneStep=5000, aTuneNoise=.1, aTuneStartValue=WindowSize/2;
+unsigned int aTuneLookBack=30;
 unsigned long  modelTime, serialTime;
 PID_ATune aTune(&vars[INPUT], &vars[OUTPUT]);
  
@@ -167,7 +163,6 @@ void DisplayTemp(double tAvg){
     double tempOut = vars[OUTPUT] / 100;
 	dtostrf(tAvg, 3, 2, tempString);
 	int boxY = 60 - int(0.6 * tempOut);
-    int chk = DHT11.read(DHT11PIN);
     
 	do{
         for(int i = 0; i < 10; i++){
@@ -211,45 +206,6 @@ double Kelvin(double celsius){
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
 
-void RTDDEBUG(void){
-		Serial1.print("RTD Fault, register: ");
-		do{
-			u8g.setFont(u8g_font_unifont);
-			u8g.setPrintPos(0, 20);
-			u8g.print("Register fault");
-		}while( u8g.nextPage() );	
-		Serial1.print(RTD_CH0.status);
-		if(0x80 & RTD_CH0.status)
-		{
-			Serial1.println("RTD High Threshold Met");  // RTD high threshold fault
-		}
-		else if(0x40 & RTD_CH0.status)
-		{
-			Serial1.println("RTD Low Threshold Met");   // RTD low threshold fault
-		}
-		else if(0x20 & RTD_CH0.status)
-		{
-			Serial1.println("REFin- > 0.85 x Vbias");   // REFin- > 0.85 x Vbias
-		}
-		else if(0x10 & RTD_CH0.status)
-		{
-			Serial1.println("FORCE- open");             // REFin- < 0.85 x Vbias, FORCE- open
-		}
-			else if(0x08 & RTD_CH0.status)
-		{
-			Serial1.println("FORCE- open");             // RTDin- < 0.85 x Vbias, FORCE- open
-		}
-		else if(0x04 & RTD_CH0.status)
-		{
-			Serial1.println("Over/Under voltage fault");  // overvoltage/undervoltage fault
-		}
-		else
-		{
-			Serial1.println("Unknown fault, check connection"); // print RTD temperature heading
-		}
-	  // end of fault handling	
- }
-
 void SendPlotData(){
     digitalWrite(22, HIGH);
 	Serial1.println("^");
@@ -268,8 +224,6 @@ void SerialSend(){
     Serial1.println("#");
     Serial1.println(vars[SETPOINT]);
     Serial1.println("}");
-    Serial1.println((double)DHT11.humidity);
-    Serial1.println("$");
     Serial1.println(myPID.GetKp());
     Serial1.println("%");
     Serial1.println(myPID.GetKi());
@@ -278,8 +232,6 @@ void SerialSend(){
     Serial1.println(")");
     Serial1.println((double)vars[TUNING]);
     Serial1.println("{");
-    Serial1.println((double)DHT11.temperature);
-    Serial1.println("=");
     Serial1.println((double)vars[HALARM]);
     Serial1.println("[");
     Serial1.println((double)vars[LALARM]);
@@ -384,8 +336,8 @@ void ReadVars(void){
     myPID.SetTunings(settings.p, settings.i, settings.d);
     myPID.SetControllerDirection(settings.dir);
     vars[SETPOINT] = settings.set;
-    vars[HALARM] = settings.hA;
-    vars[LALARM] = settings.lA;
+    //vars[HALARM] = settings.hA;
+    //vars[LALARM] = settings.lA;
     //WindowSize = settings.winSize;
 }
 
@@ -394,15 +346,15 @@ void SetupVars(void){
     vars[OUTPUT] = 0;
     vars[INPUT] = 22;
     vars[TUNING] = 0;
-    vars[HALARM] = 24.0;
-    vars[LALARM] = 23.0;
+    vars[HALARM] = 100.0;
+    vars[LALARM] = 0.0;
 };
 
 void WriteVars(void){
     settings.p = myPID.GetKp();
     settings.i = myPID.GetKi();
     settings.d = myPID.GetKd();
-    settings.dir = direction;
+    settings.dir = 1;
     settings.set = vars[SETPOINT];
     settings.winSize = WindowSize;
     settings.hA = vars[HALARM];
@@ -468,7 +420,7 @@ void loop(void) {
 		tempIn = (double)RTD_CH0.rtd_res_raw;
 		// calculate RTD resistance
 		tmp = tempIn * 400 / 32768;
-		tmp = (tempIn / 32) - 257.152; // <-sensor calibration
+		tmp = (tempIn / 32) - 256.552; // <-sensor calibration
         
 		tempAvg += tmp;
 		runningAvg = tempAvg / tempTemp;
