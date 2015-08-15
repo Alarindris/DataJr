@@ -224,16 +224,13 @@ void DisplayTemp(double tAvg){
 void(* resetFunc) (void) = 0;//declare reset function at address 0
 
 void SendPlotData(){
-    digitalWrite(22, HIGH);
 	Serial.println("^");
     Serial.println(vars[INPUT]*10);
 	Serial.println(vars[OUTPUT]);
 	Serial.flush();
-    digitalWrite(22, LOW);
 }
 
 void SerialSend(){
-    digitalWrite(22, HIGH);
     static int t, h, l;
     String alarm;
     (vars[TUNING] > 0.5)?t = 1:t = 0;
@@ -247,7 +244,7 @@ void SerialSend(){
     Serial.println("!");
     Serial.println(myPID.GetKd());
     Serial.println(")");
-    Serial.println((double)vars[TUNING]);
+    Serial.println((double)vars[TUNING]);l
     Serial.println("{");
     Serial.println((double)vars[HALARM]);
     Serial.println("[");
@@ -255,7 +252,6 @@ void SerialSend(){
     Serial.println("]");
     Serial.println(alarm);
 	//Serial.flush();
-    digitalWrite(22, LOW);
 }
  
 void SerialReceive(){
@@ -422,18 +418,14 @@ void OutputCheck(void){
 	if(vars[OUTPUT] > millis() - windowStartTime && vars[OUTPUT] > 1000 && outputOn == "off"){
         outputOn = "on";
         digitalWrite(RelayPin,HIGH);
-        digitalWrite(22, HIGH);
         Serial.println("_");
         Serial.println("on ");
-        digitalWrite(22, LOW);
     }
 	if(vars[OUTPUT] < millis() - windowStartTime && outputOn == "on"){
         outputOn = "off";
         digitalWrite(RelayPin,LOW);
-        digitalWrite(22, HIGH);
         Serial.println("_");
         Serial.println("off");
-        digitalWrite(22, LOW);
     }
 }
     
