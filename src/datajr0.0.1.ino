@@ -244,7 +244,7 @@ void SerialSend(){
     Serial.println("!");
     Serial.println(myPID.GetKd());
     Serial.println(")");
-    Serial.println((double)vars[TUNING]);l
+    Serial.println((double)vars[TUNING]);
     Serial.println("{");
     Serial.println((double)vars[HALARM]);
     Serial.println("[");
