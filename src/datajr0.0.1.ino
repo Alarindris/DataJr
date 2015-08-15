@@ -62,22 +62,40 @@ _ control       95
 #define LALARM      91
 
 #include <Arduino.h>
-#include "U8glib.h" //serial lcd library
+//#include "U8glib.h" //serial lcd library
 #include <SPI.h>    //communication library
 #include <PlayingWithFusion_MAX31865.h>              // core library  Playing With Fusion MAX31865 libraries
 #include <PlayingWithFusion_MAX31865_STRUCT.h>       // struct library
 #include <PID_v1.h>	//PID library
 #include <PID_AutoTune_v0.h>
 #include <avr/eeprom.h>
+/*** LCD stuff ***/
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
+#define I2C_ADDR    0x27  // Define I2C Address where the PCF8574A is
+                          // Address can be changed by soldering A0, A1, or A2
+                          // Default is 0x27
 
-#define RelayPin 44
-#define ALARM_PIN 8
+// map the pin configuration of LCD backpack for the LiquidCristal class
+#define BACKLIGHT_PIN 3
+#define En_pin  2
+#define Rw_pin  1
+#define Rs_pin  0
+#define D4_pin  4
+#define D5_pin  5
+#define D6_pin  6
+#define D7_pin  7
+
+LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,BACKLIGHT_PIN, POSITIVE);
+
+#define RelayPin 3
+#define ALARM_PIN 4
 #define SERIAL_BAUD 115200
 #define SERIAL_MIN_BITS 4
 
 /*** Display vars ***/
-U8GLIB_ST7920_128X64 u8g(13, 11, 12, U8G_PIN_NONE);   	//create lcd display variable
+//U8GLIB_ST7920_128X64 u8g(6, 8, 7, U8G_PIN_NONE);   	//SCK, SID, CS
  
 /*** PID vars ***/
 int WindowSize = 10000;			//PID variables
@@ -164,6 +182,12 @@ void DisplayTemp(double tAvg){
 	dtostrf(tAvg, 3, 2, tempString);
 	int boxY = 60 - int(0.6 * tempOut);
     
+    lcd.setCursor(11,0);
+    lcd.print(String(vars[SETPOINT]));
+    lcd.setCursor(11,2);
+    lcd.print(String(tempString));
+    
+    /*
 	do{
         for(int i = 0; i < 10; i++){
             u8g.drawPixel(111, (i * 6) + 2);
@@ -194,16 +218,17 @@ void DisplayTemp(double tAvg){
         }
         
     }while( u8g.nextPage() );
+    */
 }
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
 
 void SendPlotData(){
     digitalWrite(22, HIGH);
-	Serial1.println("^");
-    Serial1.println(vars[INPUT]*10);
-	Serial1.println(vars[OUTPUT]);
-	Serial1.flush();
+	Serial.println("^");
+    Serial.println(vars[INPUT]*10);
+	Serial.println(vars[OUTPUT]);
+	Serial.flush();
     digitalWrite(22, LOW);
 }
 
@@ -213,23 +238,23 @@ void SerialSend(){
     String alarm;
     (vars[TUNING] > 0.5)?t = 1:t = 0;
     (halarmOn || lalarmOn) ? alarm = "On": alarm = "Off";
-    Serial1.println("#");
-    Serial1.println(vars[SETPOINT]);
-    Serial1.println("}");
-    Serial1.println(myPID.GetKp());
-    Serial1.println("%");
-    Serial1.println(myPID.GetKi());
-    Serial1.println("!");
-    Serial1.println(myPID.GetKd());
-    Serial1.println(")");
-    Serial1.println((double)vars[TUNING]);
-    Serial1.println("{");
-    Serial1.println((double)vars[HALARM]);
-    Serial1.println("[");
-    Serial1.println((double)vars[LALARM]);
-    Serial1.println("]");
-    Serial1.println(alarm);
-	//Serial1.flush();
+    Serial.println("#");
+    Serial.println(vars[SETPOINT]);
+    Serial.println("}");
+    Serial.println(myPID.GetKp());
+    Serial.println("%");
+    Serial.println(myPID.GetKi());
+    Serial.println("!");
+    Serial.println(myPID.GetKd());
+    Serial.println(")");
+    Serial.println((double)vars[TUNING]);
+    Serial.println("{");
+    Serial.println((double)vars[HALARM]);
+    Serial.println("[");
+    Serial.println((double)vars[LALARM]);
+    Serial.println("]");
+    Serial.println(alarm);
+	//Serial.flush();
     digitalWrite(22, LOW);
 }
  
@@ -237,28 +262,28 @@ void SerialReceive(){
 
     char inChar;
 
-	while(Serial1.available() > SERIAL_MIN_BITS){
+	while(Serial.available() > SERIAL_MIN_BITS){
         digitalWrite(23, HIGH);
         String inputString;
         char varIndex = 0;
         
-        varIndex = char(Serial1.read());
+        varIndex = char(Serial.read());
       
         int intIndex = varIndex;
 		
         while(inChar != '\n'){
 			inputString += inChar;
-			inChar = char(Serial1.read());
+			inChar = char(Serial.read());
 		}
         inChar = 0;
 
 		if(varIndex > 1){
 			inputString = "";
        
-            inChar = char(Serial1.read());
+            inChar = char(Serial.read());
 			while (inChar != '\n'){
                 inputString += inChar;
-                inChar = char(Serial1.read());
+                inChar = char(Serial.read());
             }
 			vars[intIndex] = atof(inputString.c_str());
             double varTemp = vars[intIndex];
@@ -354,15 +379,27 @@ void WriteVars(void){
     eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
 }
 
+void SetupLCD(void){
+  lcd.begin(20,4);        // 20 columns by 4 rows on display
+
+  lcd.setBacklight(HIGH); // Turn on backlight, LOW for off
+  
+  lcd.setCursor(0, 0);
+  lcd.print("Setpoint:");
+  lcd.setCursor(0, 2);
+  lcd.print("Temp. C :");
+}
+
 /******************************==MAIN_LOOP==******************************/
 void setup(void) {
     SetupVars();
     ReadVars();
-	Serial1.begin(SERIAL_BAUD);
+	Serial.begin(SERIAL_BAUD);
 	SetupPID();
 	SetupAutoTune();
 	SetupSPI();
     SetupAlarm();
+    SetupLCD();
     pinMode(22, OUTPUT); //serial out  <- indicator LEDs
     pinMode(23, OUTPUT); //serial in
 }
@@ -386,28 +423,28 @@ void OutputCheck(void){
         outputOn = "on";
         digitalWrite(RelayPin,HIGH);
         digitalWrite(22, HIGH);
-        Serial1.println("_");
-        Serial1.println("on ");
+        Serial.println("_");
+        Serial.println("on ");
         digitalWrite(22, LOW);
     }
 	if(vars[OUTPUT] < millis() - windowStartTime && outputOn == "on"){
         outputOn = "off";
         digitalWrite(RelayPin,LOW);
         digitalWrite(22, HIGH);
-        Serial1.println("_");
-        Serial1.println("off");
+        Serial.println("_");
+        Serial.println("off");
         digitalWrite(22, LOW);
     }
 }
     
 void loop(void) {
-	u8g.firstPage();  /***<-- DONT MOVE THIS??***/
+	//u8g.firstPage();  /***<-- DONT MOVE THIS??***/
 	now = millis();
 	rtd_ptr = &RTD_CH0;
 	rtd_ch0.MAX31865_full_read(rtd_ptr);          // Update MAX31855 readings
     
 	if(0 == RTD_CH0.status)                       // no fault, print info to serial port
-	{
+	{	
 		tempTemp += 1;
 		tempIn = (double)RTD_CH0.rtd_res_raw;
 		// calculate RTD resistance
@@ -416,8 +453,6 @@ void loop(void) {
         
 		tempAvg += tmp;
 		runningAvg = tempAvg / tempTemp;
-		
-        
         
         vars[INPUT] = runningAvg;
 		
