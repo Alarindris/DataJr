@@ -231,7 +231,7 @@ void SendPlotData(){
 }
 
 void SerialSend(){
-    static int t, h, l;
+    static int t;
     String alarm;
     (vars[TUNING] > 0.5)?t = 1:t = 0;
     (halarmOn || lalarmOn) ? alarm = "On": alarm = "Off";
