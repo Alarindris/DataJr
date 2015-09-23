@@ -51,8 +51,8 @@ _ control       95
 ? status        63
 **************************************************************/
 const int SETPOINT = 115;
-const int INPUT    =  94;
-const int OUTPUT   =  64;
+const int IN    =  94;
+const int OUT   =  64;
 const int PGAIN    =  36;
 const int IGAIN    =  37;
 const int DGAIN    =  33;
@@ -78,21 +78,21 @@ const int LALARM   =  91;
                           // Default is 0x27
 
 // map the pin configuration of LCD backpack for the LiquidCristal class
-#define BACKLIGHT_PIN 3
-#define En_pin  2
-#define Rw_pin  1
-#define Rs_pin  0
-#define D4_pin  4
-#define D5_pin  5
-#define D6_pin  6
-#define D7_pin  7
+const int BACKLIGHT_PIN = 3;
+const int En_pin =  2;
+const int Rw_pin =  1;
+const int Rs_pin =  0;
+const int D4_pin =  4;
+const int D5_pin =  5;
+const int D6_pin =  6;
+const int D7_pin =  7;
 
 LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,BACKLIGHT_PIN, POSITIVE);
 
-#define RelayPin 3
-#define ALARM_PIN 4
-#define SERIAL_BAUD 115200
-#define SERIAL_MIN_BITS 4
+const int RelayPin = 3;
+const int ALARM_PIN = 4;
+const unsigned long SERIAL_BAUD = 115200;
+const int SERIAL_MIN_BITS = 4;
 
 /*** Display vars ***/
 //U8GLIB_ST7920_128X64 u8g(6, 8, 7, U8G_PIN_NONE);    //SCK, SID, CS
@@ -101,7 +101,7 @@ LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,
 int WindowSize = 10000;     //PID variables
 unsigned long windowStartTime;
 //int direction = REVERSE;
-PID myPID(&vars[INPUT], &vars[OUTPUT], &vars[SETPOINT],19432.63, 807.59,0, 1);  // create PID variable  REVERSE = COOL = 1  DIRECT = HEAT = 0
+PID myPID(&vars[IN], &vars[OUT], &vars[SETPOINT],19432.63, 807.59,0, 1);  // create PID variable  REVERSE = COOL = 1  DIRECT = HEAT = 0
  
 /*** Auto-tune vars ***/
 byte ATuneModeRemember=2;
@@ -111,7 +111,7 @@ double outputStart=0;
 double aTuneStep=5000, aTuneNoise=.1, aTuneStartValue=WindowSize/2;
 unsigned int aTuneLookBack=30;
 unsigned long  modelTime, serialTime;
-PID_ATune aTune(&vars[INPUT], &vars[OUTPUT]);
+PID_ATune aTune(&vars[IN], &vars[OUT]);
  
 /*** MAX31865 vars ***/
 static struct var_max31865 RTD_CH0;
@@ -126,7 +126,7 @@ int tempTemp = 0;
 double tempAvg = 0;
 double tmp, tempIn, runningAvg;
 int multiSample = WindowSize;
-String outputOn = "off";
+bool outputOn = false;
 bool TIMEOUT = false;
 bool alarmOn = false;
 bool lalarmOn = false;
@@ -160,7 +160,7 @@ void changeAutoTune(){
  if(vars[TUNING] > 0.5)
   {
     //Set the output to the desired starting frequency.
-    vars[OUTPUT]=aTuneStartValue;
+    vars[OUT]=aTuneStartValue;
     aTune.SetNoiseBand(aTuneNoise);
     aTune.SetOutputStep(aTuneStep);
     aTune.SetLookbackSec((int)aTuneLookBack);
@@ -178,7 +178,7 @@ void changeAutoTune(){
 void DisplayTemp(double tAvg){
     double Ftemp = (tAvg * 9) / 5 + 32;
   char tempString[10];
-    double tempOut = vars[OUTPUT] / 100;
+    double tempOut = vars[OUT] / 100;
   dtostrf(tAvg, 3, 2, tempString);
   int boxY = 60 - int(0.6 * tempOut);
     
@@ -225,8 +225,8 @@ void(* resetFunc) (void) = 0;//declare reset function at address 0
 
 void SendPlotData(){
   Serial.println(F("^"));
-    Serial.println(vars[INPUT]*10);
-  Serial.println(vars[OUTPUT]);
+    Serial.println(vars[IN]*10);
+  Serial.println(vars[OUT]);
   Serial.flush();
 }
 
@@ -305,7 +305,7 @@ void SerialReceive(){
 }
 
 void SetupAlarm(){
-    pinMode(ALARM_PIN, OUTPUT);
+    pinMode(ALARM_PIN, OUT);
 }
 
 void SetupAutoTune(void){
@@ -320,7 +320,7 @@ void SetupAutoTune(void){
 }
 
 void SetupPID(void){
-  pinMode(RelayPin, OUTPUT);
+  pinMode(RelayPin, OUT);
   windowStartTime = millis(); //initialize the variables we're linked to
   myPID.SetOutputLimits(0, WindowSize);  //tell the PID to range between 0 and the full window size
   myPID.SetMode(AUTOMATIC); //turn the PID on
@@ -332,7 +332,7 @@ void SetupSPI(void){
   SPI.setDataMode(SPI_MODE1);             // MAX31865 works in MODE1 or MODE3
   
   // initalize the chip select pin
-  pinMode(CS0_PIN, OUTPUT);
+  pinMode(CS0_PIN, OUT);
   rtd_ch0.MAX31865_config();
   
   // give the sensor time to set up
@@ -356,8 +356,8 @@ void ReadVars(void){
 
 void SetupVars(void){
     vars[SETPOINT] = 24;
-    vars[OUTPUT] = 0;
-    vars[INPUT] = 22;
+    vars[OUT] = 0;
+    vars[IN] = 22;
     vars[TUNING] = 0;
     vars[HALARM] = 100.0;
     vars[LALARM] = 0.0;
@@ -396,8 +396,8 @@ void setup(void) {
   SetupSPI();
     SetupAlarm();
     SetupLCD();
-    pinMode(22, OUTPUT); //serial out  <- indicator LEDs
-    pinMode(23, OUTPUT); //serial in
+    pinMode(22, OUT); //serial out  <- indicator LEDs
+    pinMode(23, OUT); //serial in
 }
   
 void AlarmCheck(double t){
@@ -415,14 +415,14 @@ void AlarmCheck(double t){
 }
 
 void OutputCheck(void){
-  if(vars[OUTPUT] > millis() - windowStartTime && vars[OUTPUT] > 1000 && outputOn == "off"){
-        outputOn = "on";
+  if(vars[OUT] > millis() - windowStartTime && vars[OUT] > 1000 && outputOn == false){
+        outputOn = true;
         digitalWrite(RelayPin,HIGH);
         Serial.println(F("_"));
         Serial.println(F("on "));
     }
-  if(vars[OUTPUT] < millis() - windowStartTime && outputOn == "on"){
-        outputOn = "off";
+  if(vars[OUT] < millis() - windowStartTime && outputOn == true){
+        outputOn = false;
         digitalWrite(RelayPin,LOW);
         Serial.println(F("_"));
         Serial.println(F("off"));
@@ -446,7 +446,7 @@ void loop(void) {
     tempAvg += tmp;
     runningAvg = tempAvg / tempTemp;
         
-        vars[INPUT] = runningAvg;
+        vars[IN] = runningAvg;
     
     if(vars[TUNING] > 0.5){
       byte val = (aTune.Runtime());
