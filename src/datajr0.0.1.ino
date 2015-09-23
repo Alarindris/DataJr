@@ -66,7 +66,7 @@ _ control       95
 #include <SPI.h>    //communication library
 #include <PlayingWithFusion_MAX31865.h>              // core library  Playing With Fusion MAX31865 libraries
 #include <PlayingWithFusion_MAX31865_STRUCT.h>       // struct library
-#include <PID_v1.h>	//PID library
+#include <PID_v1.h>  //PID library
 #include <PID_AutoTune_v0.h>
 #include <avr/eeprom.h>
 /*** LCD stuff ***/
@@ -95,13 +95,13 @@ LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,
 #define SERIAL_MIN_BITS 4
 
 /*** Display vars ***/
-//U8GLIB_ST7920_128X64 u8g(6, 8, 7, U8G_PIN_NONE);   	//SCK, SID, CS
+//U8GLIB_ST7920_128X64 u8g(6, 8, 7, U8G_PIN_NONE);    //SCK, SID, CS
  
 /*** PID vars ***/
-int WindowSize = 10000;			//PID variables
+int WindowSize = 10000;     //PID variables
 unsigned long windowStartTime;
-int direction = REVERSE;
-PID myPID(&vars[INPUT], &vars[OUTPUT], &vars[SETPOINT],19432.63, 807.59,0, direction); 	// create PID variable  REVERSE = COOL  DIRECT = HEAT
+//int direction = REVERSE;
+PID myPID(&vars[INPUT], &vars[OUTPUT], &vars[SETPOINT],19432.63, 807.59,0, 1);  // create PID variable  REVERSE = COOL = 1  DIRECT = HEAT = 0
  
 /*** Auto-tune vars ***/
 byte ATuneModeRemember=2;
@@ -117,8 +117,8 @@ PID_ATune aTune(&vars[INPUT], &vars[OUTPUT]);
 static struct var_max31865 RTD_CH0;
 struct var_max31865 *rtd_ptr;
 const int CS0_PIN = 9;  // CS pin used for the connection with the sensor
-						// other connections are controlled by the SPI library)
-PWFusion_MAX31865_RTD rtd_ch0(CS0_PIN);  				//create rtd sensor variables
+            // other connections are controlled by the SPI library)
+PWFusion_MAX31865_RTD rtd_ch0(CS0_PIN);         //create rtd sensor variables
  
 /*** Other vars ***/
 unsigned long now = millis();
@@ -177,10 +177,10 @@ void changeAutoTune(){
 
 void DisplayTemp(double tAvg){
     double Ftemp = (tAvg * 9) / 5 + 32;
-	char tempString[10];
+  char tempString[10];
     double tempOut = vars[OUTPUT] / 100;
-	dtostrf(tAvg, 3, 2, tempString);
-	int boxY = 60 - int(0.6 * tempOut);
+  dtostrf(tAvg, 3, 2, tempString);
+  int boxY = 60 - int(0.6 * tempOut);
     
     lcd.setCursor(11,0);
     lcd.print(String(vars[SETPOINT]));
@@ -188,7 +188,7 @@ void DisplayTemp(double tAvg){
     lcd.print(String(tempString));
     
     /*
-	do{
+  do{
         for(int i = 0; i < 10; i++){
             u8g.drawPixel(111, (i * 6) + 2);
             u8g.drawPixel(124, (i * 6) + 2);
@@ -224,10 +224,10 @@ void DisplayTemp(double tAvg){
 void(* resetFunc) (void) = 0;//declare reset function at address 0
 
 void SendPlotData(){
-	Serial.println("^");
+  Serial.println(F("^"));
     Serial.println(vars[INPUT]*10);
-	Serial.println(vars[OUTPUT]);
-	Serial.flush();
+  Serial.println(vars[OUTPUT]);
+  Serial.flush();
 }
 
 void SerialSend(){
@@ -235,30 +235,30 @@ void SerialSend(){
     String alarm;
     (vars[TUNING] > 0.5)?t = 1:t = 0;
     (halarmOn || lalarmOn) ? alarm = "On": alarm = "Off";
-    Serial.println("#");
+    Serial.println(F("#"));
     Serial.println(vars[SETPOINT]);
-    Serial.println("}");
+    Serial.println(F("}"));
     Serial.println(myPID.GetKp());
-    Serial.println("%");
+    Serial.println(F("%"));
     Serial.println(myPID.GetKi());
-    Serial.println("!");
+    Serial.println(F("!"));
     Serial.println(myPID.GetKd());
-    Serial.println(")");
+    Serial.println(F(")"));
     Serial.println((double)vars[TUNING]);
-    Serial.println("{");
+    Serial.println(F("{"));
     Serial.println((double)vars[HALARM]);
-    Serial.println("[");
+    Serial.println(F("["));
     Serial.println((double)vars[LALARM]);
-    Serial.println("]");
+    Serial.println(F("]"));
     Serial.println(alarm);
-	//Serial.flush();
+  //Serial.flush();
 }
  
 void SerialReceive(){
 
     char inChar;
 
-	while(Serial.available() > SERIAL_MIN_BITS){
+  while(Serial.available() > SERIAL_MIN_BITS){
         digitalWrite(23, HIGH);
         String inputString;
         char varIndex = 0;
@@ -266,22 +266,22 @@ void SerialReceive(){
         varIndex = char(Serial.read());
       
         int intIndex = varIndex;
-		
+    
         while(inChar != '\n'){
-			inputString += inChar;
-			inChar = char(Serial.read());
-		}
+      inputString += inChar;
+      inChar = char(Serial.read());
+    }
         inChar = 0;
 
-		if(varIndex > 1){
-			inputString = "";
+    if(varIndex > 1){
+      inputString = "";
        
             inChar = char(Serial.read());
-			while (inChar != '\n'){
+      while (inChar != '\n'){
                 inputString += inChar;
                 inChar = char(Serial.read());
             }
-			vars[intIndex] = atof(inputString.c_str());
+      vars[intIndex] = atof(inputString.c_str());
             double varTemp = vars[intIndex];
             switch(varIndex){
                 case PGAIN:
@@ -298,7 +298,7 @@ void SerialReceive(){
             }
 
             WriteVars();
-		}
+    }
         digitalWrite(23, LOW);
 
     } 
@@ -310,33 +310,33 @@ void SetupAlarm(){
 
 void SetupAutoTune(void){
 
-	if(vars[TUNING] > 0.5){
-		vars[TUNING] = 0;
-		changeAutoTune();
-		vars[TUNING] = 1;
-	}
+  if(vars[TUNING] > 0.5){
+    vars[TUNING] = 0;
+    changeAutoTune();
+    vars[TUNING] = 1;
+  }
   
-	serialTime = 0;
+  serialTime = 0;
 }
 
 void SetupPID(void){
-	pinMode(RelayPin, OUTPUT);
-	windowStartTime = millis(); //initialize the variables we're linked to
-	myPID.SetOutputLimits(0, WindowSize);  //tell the PID to range between 0 and the full window size
-	myPID.SetMode(AUTOMATIC);	//turn the PID on
+  pinMode(RelayPin, OUTPUT);
+  windowStartTime = millis(); //initialize the variables we're linked to
+  myPID.SetOutputLimits(0, WindowSize);  //tell the PID to range between 0 and the full window size
+  myPID.SetMode(AUTOMATIC); //turn the PID on
 }
  
 void SetupSPI(void){
-	SPI.begin();                            // begin SPI
-	SPI.setClockDivider(SPI_CLOCK_DIV16);   // SPI speed to SPI_CLOCK_DIV16 (1MHz)
-	SPI.setDataMode(SPI_MODE1);             // MAX31865 works in MODE1 or MODE3
+  SPI.begin();                            // begin SPI
+  SPI.setClockDivider(SPI_CLOCK_DIV16);   // SPI speed to SPI_CLOCK_DIV16 (1MHz)
+  SPI.setDataMode(SPI_MODE1);             // MAX31865 works in MODE1 or MODE3
   
-	// initalize the chip select pin
-	pinMode(CS0_PIN, OUTPUT);
-	rtd_ch0.MAX31865_config();
+  // initalize the chip select pin
+  pinMode(CS0_PIN, OUTPUT);
+  rtd_ch0.MAX31865_config();
   
-	// give the sensor time to set up
-	delay(100);
+  // give the sensor time to set up
+  delay(100);
 }
 
 struct settings_t{
@@ -381,25 +381,25 @@ void SetupLCD(void){
   lcd.setBacklight(HIGH); // Turn on backlight, LOW for off
   
   lcd.setCursor(0, 0);
-  lcd.print("Setpoint:");
+  lcd.print(F("Setpoint:"));
   lcd.setCursor(0, 2);
-  lcd.print("Temp. C :");
+  lcd.print(F("Temp. C :"));
 }
 
 /******************************==MAIN_LOOP==******************************/
 void setup(void) {
     SetupVars();
     ReadVars();
-	Serial.begin(SERIAL_BAUD);
-	SetupPID();
-	SetupAutoTune();
-	SetupSPI();
+  Serial.begin(SERIAL_BAUD);
+  SetupPID();
+  SetupAutoTune();
+  SetupSPI();
     SetupAlarm();
     SetupLCD();
     pinMode(22, OUTPUT); //serial out  <- indicator LEDs
     pinMode(23, OUTPUT); //serial in
 }
- 	
+  
 void AlarmCheck(double t){
     if(t > vars[HALARM]){
         Alarm(true);
@@ -415,80 +415,80 @@ void AlarmCheck(double t){
 }
 
 void OutputCheck(void){
-	if(vars[OUTPUT] > millis() - windowStartTime && vars[OUTPUT] > 1000 && outputOn == "off"){
+  if(vars[OUTPUT] > millis() - windowStartTime && vars[OUTPUT] > 1000 && outputOn == "off"){
         outputOn = "on";
         digitalWrite(RelayPin,HIGH);
-        Serial.println("_");
-        Serial.println("on ");
+        Serial.println(F("_"));
+        Serial.println(F("on "));
     }
-	if(vars[OUTPUT] < millis() - windowStartTime && outputOn == "on"){
+  if(vars[OUTPUT] < millis() - windowStartTime && outputOn == "on"){
         outputOn = "off";
         digitalWrite(RelayPin,LOW);
-        Serial.println("_");
-        Serial.println("off");
+        Serial.println(F("_"));
+        Serial.println(F("off"));
     }
 }
     
 void loop(void) {
-	//u8g.firstPage();  /***<-- DONT MOVE THIS??***/
-	now = millis();
-	rtd_ptr = &RTD_CH0;
-	rtd_ch0.MAX31865_full_read(rtd_ptr);          // Update MAX31855 readings
+  //u8g.firstPage();  /***<-- DONT MOVE THIS??***/
+  now = millis();
+  rtd_ptr = &RTD_CH0;
+  rtd_ch0.MAX31865_full_read(rtd_ptr);          // Update MAX31855 readings
     
-	if(0 == RTD_CH0.status)                       // no fault, print info to serial port
-	{	
-		tempTemp += 1;
-		tempIn = (double)RTD_CH0.rtd_res_raw;
-		// calculate RTD resistance
-		tmp = tempIn * 400 / 32768;
-		tmp = (tempIn / 32) - 256.552; // <-sensor calibration
+  if(0 == RTD_CH0.status)                       // no fault, print info to serial port
+  { 
+    tempTemp += 1;
+    tempIn = (double)RTD_CH0.rtd_res_raw;
+    // calculate RTD resistance
+    tmp = tempIn * 400 / 32768;
+    tmp = (tempIn / 32) - 256.552; // <-sensor calibration
         
-		tempAvg += tmp;
-		runningAvg = tempAvg / tempTemp;
+    tempAvg += tmp;
+    runningAvg = tempAvg / tempTemp;
         
         vars[INPUT] = runningAvg;
-		
-		if(vars[TUNING] > 0.5){
-			byte val = (aTune.Runtime());
-			if (val != 0){
-				vars[TUNING] = 0;
-			}
-			if(!(vars[TUNING] > 0.5)){ //we're done, set the tuning parameters
-				kp = aTune.GetKp();
-				ki = aTune.GetKi();
-				kd = aTune.GetKd();
-				myPID.SetTunings(kp,ki,kd);
-				AutoTuneHelper(false);
+    
+    if(vars[TUNING] > 0.5){
+      byte val = (aTune.Runtime());
+      if (val != 0){
+        vars[TUNING] = 0;
+      }
+      if(!(vars[TUNING] > 0.5)){ //we're done, set the tuning parameters
+        kp = aTune.GetKp();
+        ki = aTune.GetKi();
+        kd = aTune.GetKd();
+        myPID.SetTunings(kp,ki,kd);
+        AutoTuneHelper(false);
                 WriteVars();
-			}
-		}
-		else{
-			myPID.Compute();
-		}
-		
-		if(millis() - windowStartTime>WindowSize){ //time to shift the Relay Window
-			windowStartTime += WindowSize;
-		}
-		
+      }
+    }
+    else{
+      myPID.Compute();
+    }
+    
+    if(millis() - windowStartTime>WindowSize){ //time to shift the Relay Window
+      windowStartTime += WindowSize;
+    }
+    
         OutputCheck();
  
-		if(tempTemp > multiSample){
-			tempAvg = tempAvg / tempTemp;
-			tempTemp = 0;
+    if(tempTemp > multiSample){
+      tempAvg = tempAvg / tempTemp;
+      tempTemp = 0;
             AlarmCheck(tempAvg);
             DisplayTemp(tempAvg);
-			SendPlotData();
-			tempAvg = 0;
-		}
-	}
-	
-	SerialReceive();
-	
-	if(millis()>serialTime)
-	{
-		SerialSend();
-		serialTime+=500;
-	}
+      SendPlotData();
+      tempAvg = 0;
+    }
+  }
+  
+  SerialReceive();
+  
+  if(millis()>serialTime)
+  {
+    SerialSend();
+    serialTime+=500;
+  }
     
     if(millis() % 20000 == 0){
         WriteVars();
