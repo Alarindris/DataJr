@@ -180,7 +180,7 @@ void DisplayTemp(double tAvg){
   char tempString[10];
     double tempOut = vars[OUT] / 100;
   dtostrf(tAvg, 3, 2, tempString);
-  int boxY = 60 - int(0.6 * tempOut);
+  const int boxY = 60 - int(0.6 * tempOut);
     
     lcd.setCursor(11,0);
     lcd.print(String(vars[SETPOINT]));
