@@ -50,16 +50,16 @@ _ control       95
 { ambienttemp   123
 ? status        63
 **************************************************************/
-#define SETPOINT    115
-#define INPUT       94
-#define OUTPUT      64
-#define PGAIN       36
-#define IGAIN       37
-#define DGAIN       33
-#define TUNING      41
-#define STATUS      63
-#define HALARM      61      
-#define LALARM      91
+const int SETPOINT = 115;
+const int INPUT    =  94;
+const int OUTPUT   =  64;
+const int PGAIN    =  36;
+const int IGAIN    =  37;
+const int DGAIN    =  33;
+const int TUNING   =  41;
+const int STATUS   =  63;
+const int HALARM   =  61;     
+const int LALARM   =  91;
 
 #include <Arduino.h>
 //#include "U8glib.h" //serial lcd library
