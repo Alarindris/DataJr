@@ -195,15 +195,15 @@ class plotlyThread (threading.Thread):
                 aP = getSerialLine()                   
             if sensor_data == "%":
                 aI = getSerialLine()                    
-            if sensor_data == "!":
-                aD = getSerialLine()          
             if sensor_data == "&":
+                aD = getSerialLine()          
+            if sensor_data == "=":
                 aPOut = getSerialLine()
             if sensor_data == "*":
                 aIOut = getSerialLine()
             if sensor_data == "(":
                 aDOut = getSerialLine()
-            if sensor_data == ")":
+            if sensor_data == "'":
                 aTuning = getSerialLine()
             if sensor_data == "_":
                 aCont = getSerialLine()
@@ -211,9 +211,9 @@ class plotlyThread (threading.Thread):
                 aMode = getSerialLine()
             if sensor_data == "-":
                 aOver = getSerialLine()
-            if sensor_data == "=":
+            if sensor_data == ")":
                 aHAlarm = getSerialLine()
-            if sensor_data == "[":
+            if sensor_data == "(":
                 aLAlarm = getSerialLine()
             if sensor_data == "]":
                 aAlarm  = getSerialLine()
