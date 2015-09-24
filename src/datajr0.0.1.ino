@@ -471,6 +471,39 @@ void loop(void) {
 			tempAvg = 0;
 		}
 	}
+	else 
+	{
+		lcd.setCursor(0, 1);
+		
+		if(0x80 & RTD_CH0.status)
+		{
+			lcd.print(F("High Threshold Met"));  // RTD high threshold fault
+		}
+		else if(0x40 & RTD_CH0.status)
+		{
+			lcd.print(F("Low Threshold Met"));   // RTD low threshold fault
+		}
+		else if(0x20 & RTD_CH0.status)
+		{
+			lcd.print(F("REFin- > 0.85 x Vbias"));   // REFin- > 0.85 x Vbias
+		}
+		else if(0x10 & RTD_CH0.status)
+		{
+			lcd.print(F("FORCE- open"));             // REFin- < 0.85 x Vbias, FORCE- open
+		}
+		else if(0x08 & RTD_CH0.status)
+		{
+			lcd.print(F("FORCE- open"));             // RTDin- < 0.85 x Vbias, FORCE- open
+		}
+		else if(0x04 & RTD_CH0.status)
+		{
+			lcd.print(F("Over/Under voltage fault"));  // overvoltage/undervoltage fault
+		}
+		else
+		{
+			lcd.print(F("Unknown fault, check connection")); // print RTD temperature heading
+		}
+	}  // end of fault handling
 
 	//SerialReceive();
 

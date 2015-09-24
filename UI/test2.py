@@ -319,12 +319,12 @@ class uiThread (threading.Thread):
                                     
                                     x = screen.getch()
                                     if x == ord('1'):
-                                        ser.write(")\n")
+                                        ser.write("'\n")
                                         ser.write("1.0")
                                         ser.write("\n")
                                         break
                                     if x == ord('2'):
-                                        ser.write(")\n")
+                                        ser.write("'\n")
                                         ser.write("0.03")
                                         ser.write("\n")
                                         break
@@ -337,7 +337,7 @@ class uiThread (threading.Thread):
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new setpoint:")
                                 screen.refresh()
-                                writeSerialLine("s")
+                                writeSerialLine("#")
                             elif x == ord('3'):
                                 screen.erase()
                                 screen.border(0)
@@ -355,7 +355,7 @@ class uiThread (threading.Thread):
                                 screen.border(0)
                                 screen.addstr(2, 2, "Enter new derivative gain:")
                                 screen.refresh()
-                                writeSerialLine("!")
+                                writeSerialLine("&")
                             elif x == ord('6'):
                                 screen.erase()
                                 screen.border(0)
