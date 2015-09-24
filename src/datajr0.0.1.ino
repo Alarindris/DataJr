@@ -255,6 +255,7 @@ void SerialReceive(){
 				inputString += inChar;
 				inChar = char(Serial.read());
 			}
+			intIndex -= OFFSET;
 			vars[intIndex] = atof(inputString.c_str());
 			double varTemp = vars[intIndex];
 			switch(varIndex){
@@ -505,7 +506,7 @@ void loop(void) {
 		}
 	}  // end of fault handling
 
-	//SerialReceive();
+	SerialReceive();
 
 	if(millis()>serialTime)
 	{
