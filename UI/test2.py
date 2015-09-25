@@ -108,9 +108,11 @@ layout = Layout(
 )
 
 fig = Figure(data=[trace1,trace2], layout=layout)
-
-print py.plot(fig, filename='Generator #1')
-
+try:
+	print py.plot(fig, filename='Generator #1')
+except:
+	pass
+	
 i = 0
 stream = py.Stream(stream_token)
 stream1 = py.Stream('qp5s1voa07')
