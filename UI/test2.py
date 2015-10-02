@@ -109,7 +109,7 @@ layout = Layout(
 
 fig = Figure(data=[trace1,trace2], layout=layout)
 try:
-	print py.plot(fig, filename='Generator #1')
+	print py.plot(fig, filename='Generator #1', auto_open=False)
 except:
 	pass
 	
