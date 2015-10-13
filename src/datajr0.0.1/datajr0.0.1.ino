@@ -1,22 +1,12 @@
 /***************************************************************************
-* Processor/Platform: Arduino MEGA 2560
+* Processor/Platform: Arduino Pro-Mini
 * Development Environment: Arduino 1.0.6
 *
 * Designed for use with with Playing With Fusion MAX31865 Resistance
 * Temperature Device (RTD) breakout board: SEN-30202 (PT100 or PT1000)
 *   ---> http://playingwithfusion.com/productview.php?pdid=25
 *   ---> http://playingwithfusion.com/productview.php?pdid=26
-
-* This file configures then runs a program on an Arduino Uno to read a 2-ch
-* MAX31865 RTD-to-digital converter breakout board and print results to
-* a serial port. Communication is via SPI built-in library.
-*    - Configure Arduino Uno
-*    - Configure and read resistances and statuses from MAX31865 IC 
-*      - Write config registers (MAX31865 starts up in a low-power state)
-*      - RTD resistance register
-*      - High and low status thresholds 
-*      - Fault statuses
-*    - Write formatted information to serial port
+*
 *  Circuit:
 *    Arduino Uno   Arduino Mega  -->  SEN-30201
 *    CS0: pin  9   CS0: pin  9   -->  CS, CH0
@@ -24,8 +14,6 @@
 *    MOSI: pin 11  MOSI: pin 51  -->  SDI (must not be changed for hardware SPI)
 *    MISO: pin 12  MISO: pin 50  -->  SDO (must not be changed for hardware SPI)
 *    SCK:  pin 13  SCK:  pin 52  -->  SCLK (must not be changed for hardware SPI)
-*    GND           GND           -->  GND
-*    5V            5V            -->  Vin (supply with same voltage as Arduino I/O, 5V)
 ***************************************************************************/
 double vars[20] = {0};
 const int OFFSET = 33;
@@ -177,39 +165,7 @@ void DisplayTemp(double tAvg){
 	lcd.print(String(vars[SETPOINT]));
 	lcd.setCursor(11,2);
 	lcd.print(String(tempString));
-
-	/*
-do{
-	for(int i = 0; i < 10; i++){
-	u8g.drawPixel(111, (i * 6) + 2);
-	u8g.drawPixel(124, (i * 6) + 2);
-	}
-	
-	u8g.drawLine(0,24,107,24);
-	u8g.drawRFrame(0,0,108,64,4);
-	u8g.drawRFrame(110,0,16,64,4);
-	
-	if(int(tempOut) > 0){
-	u8g.drawRBox(112, boxY + 2, 12, int(tempOut * 0.6), 4);
-	}
-	
-	u8g.setFont(u8g_font_fur30n);
-	u8g.setPrintPos(3,60);
-	u8g.print(String(tempString));
-
-	u8g.setFont(u8g_font_fub17r);
-	u8g.setPrintPos(2, 21);
-	u8g.print(String(vars[SETPOINT]));
-	u8g.setPrintPos(65, 21);
-	if(outputOn == "on"){
-	u8g.print("On");
-	}
-	else{
-	u8g.print("Off");
-	}
-	
-}while( u8g.nextPage() );
-*/
+	lcd.cursor();
 }
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
