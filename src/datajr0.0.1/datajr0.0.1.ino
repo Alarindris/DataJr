@@ -170,7 +170,6 @@ void DisplayTemp(double tAvg){
 	lcd.print(String(vars[SETPOINT]));
 	lcd.setCursor(11,2);
 	lcd.print(String(tempString));
-	lcd.cursor();
 }
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
@@ -353,7 +352,6 @@ void setup(void) {
 	SetupLCD();
 	pinMode(4, OUTPUT);
 	pinMode(5, OUTPUT);
-	  digitalWrite(7, HIGH);
   button.attach(7);
   button.interval(5);
   PCICR |= (1 << PCIE2);
@@ -408,12 +406,9 @@ ISR(PCINT2_vect) {
 }
 
 bool press = false;
+bool pressed = false;
 void menu(void){
-	if(digitalRead(7) == LOW){
-		press = !press;
-		butDir = 0;
-	}
-	if(!press){
+	if(!pressed){
 		if(butDir != 0){
 			lcd.setCursor(0,cursor);
 			lcd.print(" ");
@@ -431,11 +426,29 @@ void menu(void){
 	}else{
 		switch(cursor){
 			case 0:
-				lcd.setCursor(10, 0);
-				vars[SETPOINT] += double(butDir) / 100;
-				lcd.print(String(vars[SETPOINT]));
+
+				lcd.cursor();
+				lcd.setCursor(1, 0);
+				if(butDir != 0){
+					vars[SETPOINT] += double(butDir) / 100;
+					lcd.print(String(vars[SETPOINT]));
+				}
 				butDir = 0;
-				break;
+				lcd.noCursor();
+				break;		
+		}
+	}
+	if(digitalRead(7) == LOW){
+		press = true;
+		butDir = 0;
+	}else{
+		if(press == true && pressed == false){
+			pressed = true;
+			press = false;
+		}
+		if(press == true && pressed == true){
+			pressed = false;
+			press = false;
 		}
 	}
 }
@@ -494,7 +507,7 @@ void loop(void) {
 			tempAvg = 0;
 		}
 	}
-	else 
+	/*else 
 	{
 		lcd.setCursor(0, 1);
 		
@@ -526,7 +539,7 @@ void loop(void) {
 		{
 			lcd.print(F(" Unknown fault, check connection")); // print RTD temperature heading
 		}
-	}  // end of fault handling
+	}  // end of fault handling*/
 
 	SerialReceive();
 
