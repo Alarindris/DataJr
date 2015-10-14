@@ -45,7 +45,7 @@ const int LALARM   = 8;
 
 #include <rotary.h>
 
-Rotary r = Rotary(2, 3);
+Rotary r = Rotary(7, 8);
 #include <Arduino.h>
 #include <Math.h>
 //#include "U8glib.h" //serial lcd library
@@ -57,7 +57,7 @@ Rotary r = Rotary(2, 3);
 #include <avr/eeprom.h>
 /*** LCD stuff ***/
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+//#include <LiquidCrystal_I2C.h>
 
 #define I2C_ADDR    0x27  // Define I2C Address where the PCF8574A is
 // Address can be changed by soldering A0, A1, or A2
@@ -73,7 +73,7 @@ const int D5_pin =  5;
 const int D6_pin =  6;
 const int D7_pin =  7;
 
-LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,BACKLIGHT_PIN, POSITIVE);
+//LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,BACKLIGHT_PIN, POSITIVE);
 
 const int RelayPin = 2;
 const int ALARM_PIN = 4;
@@ -158,19 +158,6 @@ void changeAutoTune(){
 	}
 }
 
-void DisplayTemp(double tAvg){
-	double Ftemp = (tAvg * 9) / 5 + 32;
-	char tempString[10];
-	double tempOut = vars[OUT] / 100;
-	dtostrf(tAvg, 3, 2, tempString);
-	const int boxY = 60 - int(0.6 * tempOut);
-
-	lcd.setCursor(11,0);
-	lcd.print(String(vars[SETPOINT]));
-	lcd.setCursor(11,2);
-	lcd.print(String(tempString));
-	lcd.cursor();
-}
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
 
@@ -327,17 +314,6 @@ void WriteVars(void){
 	eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
 }
 
-void SetupLCD(void){
-	lcd.begin(20,4);        // 20 columns by 4 rows on display
-
-	lcd.setBacklight(HIGH); // Turn on backlight, LOW for off
-
-	lcd.setCursor(0, 0);
-	lcd.print(F("Setpoint:"));
-	lcd.setCursor(0, 2);
-	lcd.print(F("Temp. C :"));
-}
-
 /******************************==MAIN_LOOP==******************************/
 void setup(void) {
 	ReadVars();
@@ -347,9 +323,9 @@ void setup(void) {
 	SetupAutoTune();
 	SetupSPI();
 	SetupAlarm();
-	SetupLCD();
+	//SetupLCD();
+	pinMode(3, OUTPUT);
 	pinMode(4, OUTPUT);
-	pinMode(5, OUTPUT);
   PCICR |= (1 << PCIE2);
   PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
   sei();
@@ -384,15 +360,15 @@ void OutputCheck(void){
 	}
 }
 
-int crap = 0;
-
 ISR(PCINT2_vect) {
   unsigned char result = r.process();
   if (result) {
     if(result == DIR_CW){
-		crap = 1;
+		digitalWrite(3, LOW);
+		digitalWrite(4, HIGH);
 	}else{
-		crap = -1;
+		digitalWrite(4, LOW);
+		digitalWrite(3, HIGH);
 	}
   }
 }
@@ -402,17 +378,6 @@ void loop(void) {
 	rtd_ptr = &RTD_CH0;
 	rtd_ch0.MAX31865_full_read(rtd_ptr);          // Update MAX31855 readings
 
-	if(crap == 1){
-		digitalWrite(4, HIGH);
-		digitalWrite(5, LOW);
-		crap = 0;
-	}
-	if(crap == -1){
-		digitalWrite(5, HIGH);
-		digitalWrite(4, LOW);
-		crap = 0;
-	}
-	
 	if(0 == RTD_CH0.status)                       // no fault, print info to serial port
 	{ 
 		tempTemp += 1;
@@ -454,51 +419,8 @@ void loop(void) {
 			tempAvg = tempAvg / tempTemp;
 			tempTemp = 0;
 			AlarmCheck(tempAvg);
-			DisplayTemp(tempAvg);
-			SendPlotData();
 			tempAvg = 0;
 		}
-	}
-	else 
-	{
-		lcd.setCursor(0, 1);
-		
-		if(0x80 & RTD_CH0.status)
-		{
-			lcd.print(F("High Threshold Met"));  // RTD high threshold fault
-		}
-		else if(0x40 & RTD_CH0.status)
-		{
-			lcd.print(F("Low Threshold Met"));   // RTD low threshold fault
-		}
-		else if(0x20 & RTD_CH0.status)
-		{
-			lcd.print(F("REFin- > 0.85 x Vbias"));   // REFin- > 0.85 x Vbias
-		}
-		else if(0x10 & RTD_CH0.status)
-		{
-			lcd.print(F("FORCE- open"));             // REFin- < 0.85 x Vbias, FORCE- open
-		}
-		else if(0x08 & RTD_CH0.status)
-		{
-			lcd.print(F("FORCE- open"));             // RTDin- < 0.85 x Vbias, FORCE- open
-		}
-		else if(0x04 & RTD_CH0.status)
-		{
-			lcd.print(F("Over/Under voltage fault"));  // overvoltage/undervoltage fault
-		}
-		else
-		{
-			lcd.print(F("Unknown fault, check connection")); // print RTD temperature heading
-		}
-	}  // end of fault handling
-
-	SerialReceive();
-
-	if(millis()>serialTime)
-	{
-		SerialSend();
-		serialTime+=500;
 	}
 	if(millis() % 20000 == 0){
 		WriteVars();
