@@ -41,10 +41,10 @@ const int TUNING   = 6;
 const int HALARM   = 7;     
 const int LALARM   = 8;
 
-
+#include <Bounce2.h>
+Bounce button = Bounce();
 
 #include <rotary.h>
-
 Rotary r = Rotary(2, 3);
 #include <Arduino.h>
 #include <Math.h>
@@ -114,6 +114,7 @@ bool outputOn = false;
 bool alarmOn = false;
 bool lalarmOn = false;
 bool halarmOn = false;
+int cursor = 0;
 
 void Alarm(bool on){
 	if (on){
@@ -333,9 +334,11 @@ void SetupLCD(void){
 	lcd.setBacklight(HIGH); // Turn on backlight, LOW for off
 
 	lcd.setCursor(0, 0);
-	lcd.print(F("Setpoint:"));
+	lcd.print(F(" Setpoint:"));
 	lcd.setCursor(0, 2);
-	lcd.print(F("Temp. C :"));
+	lcd.print(F(" Temp. C :"));
+	lcd.setCursor(0, 3);
+	lcd.print(F(" Menu"));
 }
 
 /******************************==MAIN_LOOP==******************************/
@@ -350,6 +353,9 @@ void setup(void) {
 	SetupLCD();
 	pinMode(4, OUTPUT);
 	pinMode(5, OUTPUT);
+	  digitalWrite(7, HIGH);
+  button.attach(7);
+  button.interval(5);
   PCICR |= (1 << PCIE2);
   PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
   sei();
@@ -384,34 +390,63 @@ void OutputCheck(void){
 	}
 }
 
-int crap = 0;
+int butDir = 0;
 
 ISR(PCINT2_vect) {
   unsigned char result = r.process();
   if (result) {
     if(result == DIR_CW){
-		crap = 1;
+		butDir = 1;
+		digitalWrite(4, HIGH);
+		digitalWrite(5, LOW);
 	}else{
-		crap = -1;
+		butDir = -1;
+		digitalWrite(4, LOW);
+		digitalWrite(5, HIGH);
 	}
   }
 }
+
+bool press = false;
+void menu(void){
+	if(digitalRead(7) == LOW){
+		press = !press;
+		butDir = 0;
+	}
+	if(!press){
+		if(butDir != 0){
+			lcd.setCursor(0,cursor);
+			lcd.print(" ");
+			cursor += butDir;
+			if(cursor > 3){
+				cursor = 0;
+			}
+			if(cursor < 0){
+				cursor = 3;
+			}
+			lcd.setCursor(0, cursor);
+			lcd.print(char(126));
+			butDir = 0;
+		}
+	}else{
+		switch(cursor){
+			case 0:
+				lcd.setCursor(10, 0);
+				vars[SETPOINT] += double(butDir) / 100;
+				lcd.print(String(vars[SETPOINT]));
+				butDir = 0;
+				break;
+		}
+	}
+}
+
 
 void loop(void) {
 	//u8g.firstPage();  /***<-- DONT MOVE THIS??***/
 	rtd_ptr = &RTD_CH0;
 	rtd_ch0.MAX31865_full_read(rtd_ptr);          // Update MAX31855 readings
-
-	if(crap == 1){
-		digitalWrite(4, HIGH);
-		digitalWrite(5, LOW);
-		crap = 0;
-	}
-	if(crap == -1){
-		digitalWrite(5, HIGH);
-		digitalWrite(4, LOW);
-		crap = 0;
-	}
+	
+	menu();
 	
 	if(0 == RTD_CH0.status)                       // no fault, print info to serial port
 	{ 
@@ -449,7 +484,7 @@ void loop(void) {
 		}
 		
 		OutputCheck();
-
+		
 		if(tempTemp > multiSample){
 			tempAvg = tempAvg / tempTemp;
 			tempTemp = 0;
@@ -465,31 +500,31 @@ void loop(void) {
 		
 		if(0x80 & RTD_CH0.status)
 		{
-			lcd.print(F("High Threshold Met"));  // RTD high threshold fault
+			lcd.print(F(" High Threshold Met"));  // RTD high threshold fault
 		}
 		else if(0x40 & RTD_CH0.status)
 		{
-			lcd.print(F("Low Threshold Met"));   // RTD low threshold fault
+			lcd.print(F(" Low Threshold Met"));   // RTD low threshold fault
 		}
 		else if(0x20 & RTD_CH0.status)
 		{
-			lcd.print(F("REFin- > 0.85 x Vbias"));   // REFin- > 0.85 x Vbias
+			lcd.print(F(" REFin- > 0.85 x Vbias"));   // REFin- > 0.85 x Vbias
 		}
 		else if(0x10 & RTD_CH0.status)
 		{
-			lcd.print(F("FORCE- open"));             // REFin- < 0.85 x Vbias, FORCE- open
+			lcd.print(F(" FORCE- open"));             // REFin- < 0.85 x Vbias, FORCE- open
 		}
 		else if(0x08 & RTD_CH0.status)
 		{
-			lcd.print(F("FORCE- open"));             // RTDin- < 0.85 x Vbias, FORCE- open
+			lcd.print(F(" FORCE- open"));             // RTDin- < 0.85 x Vbias, FORCE- open
 		}
 		else if(0x04 & RTD_CH0.status)
 		{
-			lcd.print(F("Over/Under voltage fault"));  // overvoltage/undervoltage fault
+			lcd.print(F(" Over/Under voltage fault"));  // overvoltage/undervoltage fault
 		}
 		else
 		{
-			lcd.print(F("Unknown fault, check connection")); // print RTD temperature heading
+			lcd.print(F(" Unknown fault, check connection")); // print RTD temperature heading
 		}
 	}  // end of fault handling
 
