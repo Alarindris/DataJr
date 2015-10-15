@@ -143,7 +143,7 @@ void AutoTuneHelper(boolean start){
 }
 
 void changeAutoTune(){
-	if(vars[TUNING] > 0.5){
+	if(vars[TUNING] < 0.5){
 		//Set the output to the desired starting frequency.
 		vars[OUT]=aTuneStartValue;
 		aTune.SetNoiseBand(aTuneNoise);
@@ -416,46 +416,127 @@ void checkPressed(void){
 		if(press == true && pressed == false){
 			pressed = true;
 			press = false;
-		}
+		}/*
 		if(press == true && pressed == true){
 			pressed = false;
 			press = false;
-		}
+		}*/
 	}	
 }
 
+int STATE = 0;
+int DIG = 0;
 void menu(void){
-	if(!pressed){
-		if(butDir != 0){
-			lcd.setCursor(0,cursor);
-			lcd.print(" ");
-			cursor += butDir;
-			if(cursor > 3){
-				cursor = 0;
+	
+	checkPressed();
+	
+	switch(STATE){
+		case 0:
+			if(pressed){
+				switch(cursor){
+					case 0:
+						STATE = 1;
+						pressed = false;
+						break;
+					case 3:
+						STATE = 5;
+						pressed = false;
+						lcd.clear();
+						lcd.setCursor(1, 0);
+						lcd.print(F("Autotune :"));
+						lcd.setCursor(11, 0);
+						if(vars[TUNING]){
+							lcd.print(F("ON"));
+						}else{
+							lcd.print(F("OFF"));
+						}
+						lcd.setCursor(1, 1);
+						lcd.print(F("Calibrate"));
+						lcd.setCursor(1, 2);
+						lcd.print(F("Setpoint"));
+						break;
+				}
+				break;
 			}
-			if(cursor < 0){
-				cursor = 3;
+			if(butDir != 0){
+
+				lcd.setCursor(0,cursor);
+				lcd.print(" ");
+				cursor += butDir;
+				if(cursor > 3){
+					cursor = 0;
+				}
+				if(cursor < 0){
+					cursor = 3;
+				}
+				lcd.setCursor(0, cursor);
+				lcd.print(char(126));
+				butDir = 0;
 			}
+			break;
+			
+		case 1:
+		case 2:
+		case 3:
+		case 4:{
+			if(pressed){
+				STATE += 1;
+				if(STATE > 4) STATE = 0;
+				pressed = false;
+				break;
+			}
+			
+			int off = STATE;
+			if(off > 2) off += 1;
+			lcd.setCursor(10 + off, 0);
+			lcd.cursor();
+			lcd.noCursor();
+			lcd.setCursor(11,0);
+			if(butDir != 0){
+				vars[SETPOINT] += double(butDir * pow(10, 2-STATE));
+				lcd.print(String(vars[SETPOINT]));
+			}
+			butDir = 0;
+			break;
+		}
+		case 5:
 			lcd.setCursor(0, cursor);
 			lcd.print(char(126));
-			butDir = 0;
-		}
-	}else{
-		switch(cursor){
-			case 0:
-
-				lcd.cursor();
-				lcd.setCursor(1, 0);
-				if(butDir != 0){
-					vars[SETPOINT] += double(butDir) / 100;
-					lcd.print(String(vars[SETPOINT]));
+			if(pressed){
+				switch(cursor){
+					case 0:
+						changeAutoTune();
+						lcd.setCursor(11, 0);
+						if(vars[TUNING]){
+							lcd.print("ON");
+						}else{
+							lcd.print("OFF");
+						}
+						break;
+					case 1:
+					case 2:
+						break;
 				}
+				pressed = false;
+				break;
+			}
+			if(butDir != 0){
+				lcd.setCursor(0,cursor);
+				lcd.print(" ");
+				cursor += butDir;
+				if(cursor > 3){
+					cursor = 0;
+				}
+				if(cursor < 0){
+					cursor = 3;
+				}
+				lcd.setCursor(0, cursor);
+				lcd.print(char(126));
 				butDir = 0;
-				lcd.noCursor();
-				break;		
-		}
+			}
+			break;
+			
 	}
-	checkPressed();
 }
 
 
