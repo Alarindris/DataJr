@@ -407,6 +407,23 @@ ISR(PCINT2_vect) {
 
 bool press = false;
 bool pressed = false;
+
+void checkPressed(void){
+	if(digitalRead(7) == LOW){
+		press = true;
+		butDir = 0;
+	}else{
+		if(press == true && pressed == false){
+			pressed = true;
+			press = false;
+		}
+		if(press == true && pressed == true){
+			pressed = false;
+			press = false;
+		}
+	}	
+}
+
 void menu(void){
 	if(!pressed){
 		if(butDir != 0){
@@ -438,19 +455,7 @@ void menu(void){
 				break;		
 		}
 	}
-	if(digitalRead(7) == LOW){
-		press = true;
-		butDir = 0;
-	}else{
-		if(press == true && pressed == false){
-			pressed = true;
-			press = false;
-		}
-		if(press == true && pressed == true){
-			pressed = false;
-			press = false;
-		}
-	}
+	checkPressed();
 }
 
 

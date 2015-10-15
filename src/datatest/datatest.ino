@@ -1,11 +1,6 @@
-#include <rotary.h>
-
-Rotary r = Rotary(2, 3);
-#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include <Bounce2.h>
-
-Bounce  button  = Bounce();
+#include "M2tk.h"
+#include "C:\Users\Stock Room 2\Documents\Arduino\libraries\M2tklib\utility\m2ghnlc.h"
 
 #define I2C_ADDR    0x27  // Define I2C Address where the PCF8574A is
 // Address can be changed by soldering A0, A1, or A2
@@ -23,55 +18,17 @@ const int D7_pin =  7;
 
 LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,BACKLIGHT_PIN, POSITIVE);
 
-void SetupLCD(void){
-	lcd.begin(20,4);        // 20 columns by 4 rows on display
-}
+#include<openGLCD.h>
+//#include "m2ghlc.h"
+
+M2_LABEL(hello_world_label, NULL, "Hello World!");
+M2tk m2(&hello_world_label, NULL, NULL, m2_gh_lc);
 
 void setup() {
-  SetupLCD();
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT);
-  pinMode(7, INPUT);
-  digitalWrite(7, HIGH);
-  button.attach(7);
-  button.interval(5);
-  PCICR |= (1 << PCIE2);
-  PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
-  sei();
-}
-
-int crap = 0;
-
-ISR(PCINT2_vect) {
-  unsigned char result = r.process();
-  if (result) {
-    if(result == DIR_CW){
-		crap = 1;
-	}else{
-		crap = -1;
-	}
-  }
+  m2_SetLiquidCrystal(&lcd, 16, 2);
 }
 
 void loop() {
-	if(digitalRead(7) == LOW){
-		lcd.setCursor(0,3);
-		lcd.print((char)126);
-	}else{
-		lcd.setCursor(0,3);
-		lcd.print(" ");
-	}
-
-	if(crap == 1){
-		digitalWrite(4, HIGH);
-		digitalWrite(5, LOW);
-		crap = 0;
-	}
-	if(crap == -1){
-		digitalWrite(5, HIGH);
-		digitalWrite(4, LOW);
-		crap = 0;
-	}
-
+  m2.draw();
+  delay(500);
 }
-
