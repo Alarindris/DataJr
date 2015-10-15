@@ -17,7 +17,7 @@
 ***************************************************************************/
 double vars[20] = {0};
 const int OFFSET = 33;
-const int VARTOTAL = 9;
+const int VARTOTAL = 10;
 /*************************************************************
 ASCII offset + 33
 variable table
@@ -30,6 +30,7 @@ $ P             3
 ' ISTUNING      6
 ( HALARM        7
 ) LALARM        8
+* CALIBRATION	9
 **************************************************************/
 const int IN       = 0;
 const int OUT      = 1;
@@ -40,7 +41,7 @@ const int DGAIN    = 5;
 const int TUNING   = 6;
 const int HALARM   = 7;     
 const int LALARM   = 8;
-
+const int CALIBRATION = 9;
 #include <Bounce2.h>
 Bounce button = Bounce();
 
@@ -271,7 +272,7 @@ void SetupSPI(void){
 }
 
 struct settings_t{
-	double set, p, i, d, hA, lA;
+	double set, p, i, d, hA, lA, ca;
 	int winSize, dir;
 }settings;
 
@@ -280,6 +281,7 @@ void ReadVars(void){
 	myPID.SetTunings(settings.p, settings.i, settings.d);
 	myPID.SetControllerDirection(settings.dir);
 	vars[SETPOINT] = settings.set;
+	vars[CALIBRATION] = settings.ca;
 	//vars[HALARM] = settings.hA;
 	//vars[LALARM] = settings.lA;
 	//WindowSize = settings.winSize;
@@ -313,6 +315,9 @@ void SetupVars(void){
 	if(isnan(vars[DGAIN]) == 1){
 		vars[DGAIN] = 0.0;
 	}
+	if(isnan(vars[CALIBRATION]) == 1){
+		vars[CALIBRATION] = -256.552;
+	}
 };
 
 void WriteVars(void){
@@ -324,6 +329,7 @@ void WriteVars(void){
 	settings.winSize = WindowSize;
 	settings.hA = vars[HALARM];
 	settings.lA = vars[LALARM];
+	settings.ca = vars[CALIBRATION];
 	eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
 }
 
@@ -454,6 +460,8 @@ void menu(void){
 						lcd.print(F("Calibrate"));
 						lcd.setCursor(1, 2);
 						lcd.print(F("Setpoint"));
+						lcd.setCursor(1, 3);
+						lcd.print(F("Back"));
 						break;
 				}
 				break;
@@ -514,7 +522,11 @@ void menu(void){
 						}
 						break;
 					case 1:
+						break;
 					case 2:
+						break;
+					case 3:
+						STATE = 0;
 						break;
 				}
 				pressed = false;
@@ -540,6 +552,7 @@ void menu(void){
 }
 
 
+
 void loop(void) {
 	//u8g.firstPage();  /***<-- DONT MOVE THIS??***/
 	rtd_ptr = &RTD_CH0;
@@ -553,7 +566,7 @@ void loop(void) {
 		double tempIn = (double)RTD_CH0.rtd_res_raw;
 		// calculate RTD resistance
 		
-		tmp = (tempIn / 32) - 256.552; // <-sensor calibration
+		tmp = (tempIn / 32) - CALIBRATION; // <-sensor calibration
 		
 		tempAvg += tmp;
 		runningAvg = tempAvg / tempTemp;
