@@ -76,7 +76,7 @@ const int D7_pin =  7;
 
 LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,BACKLIGHT_PIN, POSITIVE);
 
-const int RelayPin = 2;
+//const int RelayPin = 2;  CHANGED TO A0
 const int ALARM_PIN = 4;
 const unsigned long SERIAL_BAUD = 115200;
 const int SERIAL_MIN_BITS = 4;
@@ -85,7 +85,7 @@ const int SERIAL_MIN_BITS = 4;
 //U8GLIB_ST7920_128X64 u8g(6, 8, 7, U8G_PIN_NONE);    //SCK, SID, CS
 
 /*** PID vars ***/
-int WindowSize = 10000;     //PID variables
+int WindowSize = 5000;     //PID variables
 unsigned long windowStartTime;
 //int direction = REVERSE;
 PID myPID(&vars[IN], &vars[OUT], &vars[SETPOINT],19432.63, 807.59,0, 1);  // create PID variable  REVERSE = COOL = 1  DIRECT = HEAT = 0
@@ -116,6 +116,7 @@ bool alarmOn = false;
 bool lalarmOn = false;
 bool halarmOn = false;
 int cursor = 0;
+bool DISP = true;  //Whether or not to display temp data on LCD
 
 void Alarm(bool on){
 	if (on){
@@ -143,34 +144,42 @@ void AutoTuneHelper(boolean start){
 	}
 }
 
+void TEST(int line){
+	lcd.setCursor(1, line);
+	lcd.print(String(millis()));
+}
+
 void changeAutoTune(){
 	if(vars[TUNING] < 0.5){
+		
 		//Set the output to the desired starting frequency.
-		vars[OUT]=aTuneStartValue;
+		vars[OUT] = aTuneStartValue;
 		aTune.SetNoiseBand(aTuneNoise);
 		aTune.SetOutputStep(aTuneStep);
 		aTune.SetLookbackSec((int)aTuneLookBack);
 		AutoTuneHelper(true);
-		vars[TUNING] = 1;
+		vars[TUNING] = 1.0;
 	}
 	else{ //cancel autotune
 		aTune.Cancel();
-		vars[TUNING] = 0;
+		vars[TUNING] = 0.0;
 		AutoTuneHelper(false);
 	}
 }
 
 void DisplayTemp(double tAvg){
-	double Ftemp = (tAvg * 9) / 5 + 32;
-	char tempString[10];
-	double tempOut = vars[OUT] / 100;
-	dtostrf(tAvg, 3, 2, tempString);
-	const int boxY = 60 - int(0.6 * tempOut);
+	if(DISP){
+		double Ftemp = (tAvg * 9) / 5 + 32;
+		char tempString[10];
+		double tempOut = vars[OUT] / 100;
+		dtostrf(tAvg, 3, 2, tempString);
+		const int boxY = 60 - int(0.6 * tempOut);
 
-	lcd.setCursor(11,0);
-	lcd.print(String(vars[SETPOINT]));
-	lcd.setCursor(11,2);
-	lcd.print(String(tempString));
+		lcd.setCursor(11,0);
+		lcd.print(String(vars[SETPOINT]));
+		lcd.setCursor(11,2);
+		lcd.print(String(tempString));
+	}
 }
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
@@ -252,7 +261,7 @@ void SetupAutoTune(void){
 }
 
 void SetupPID(void){
-	pinMode(RelayPin, OUTPUT);
+	pinMode(A0, OUTPUT);
 	windowStartTime = millis(); //initialize the variables we're linked to
 	myPID.SetOutputLimits(0, WindowSize);  //tell the PID to range between 0 and the full window size
 	myPID.SetMode(AUTOMATIC); //turn the PID on
@@ -335,7 +344,7 @@ void WriteVars(void){
 
 void SetupLCD(void){
 	lcd.begin(20,4);        // 20 columns by 4 rows on display
-
+	lcd.clear();
 	lcd.setBacklight(HIGH); // Turn on backlight, LOW for off
 
 	lcd.setCursor(0, 0);
@@ -358,11 +367,11 @@ void setup(void) {
 	SetupLCD();
 	pinMode(4, OUTPUT);
 	pinMode(5, OUTPUT);
-  button.attach(7);
-  button.interval(5);
-  PCICR |= (1 << PCIE2);
-  PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
-  sei();
+	button.attach(7);
+	button.interval(5);
+	PCICR |= (1 << PCIE2);
+	PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
+	sei();
 }
 
 void AlarmCheck(double t){
@@ -382,13 +391,13 @@ void AlarmCheck(double t){
 void OutputCheck(void){
 	if(vars[OUT] > millis() - windowStartTime && vars[OUT] > 1000 && outputOn == false){
 		outputOn = true;
-		digitalWrite(RelayPin,HIGH);
+		digitalWrite(A0,HIGH);
 		Serial.println(F("_"));
 		Serial.println(F("on "));
 	}
 	if(vars[OUT] < millis() - windowStartTime && outputOn == true){
 		outputOn = false;
-		digitalWrite(RelayPin,LOW);
+		digitalWrite(A0,LOW);
 		Serial.println(F("_"));
 		Serial.println(F("off"));
 	}
@@ -397,9 +406,9 @@ void OutputCheck(void){
 int butDir = 0;
 
 ISR(PCINT2_vect) {
-  unsigned char result = r.process();
-  if (result) {
-    if(result == DIR_CW){
+unsigned char result = r.process();
+if (result) {
+	if(result == DIR_CW){
 		butDir = 1;
 		digitalWrite(4, HIGH);
 		digitalWrite(5, LOW);
@@ -408,33 +417,34 @@ ISR(PCINT2_vect) {
 		digitalWrite(4, LOW);
 		digitalWrite(5, HIGH);
 	}
-  }
+}
 }
 
-bool press = false;
+bool pressing = false;
 bool pressed = false;
 
 void checkPressed(void){
 	if(digitalRead(7) == LOW){
-		press = true;
+		pressing = true;
 		butDir = 0;
 	}else{
-		if(press == true && pressed == false){
+		if(pressing == true && pressed == false){
 			pressed = true;
-			press = false;
+			pressing = false;
 		}/*
-		if(press == true && pressed == true){
+		if(pressing == true && pressed == true){
 			pressed = false;
-			press = false;
+			pressing = false;
 		}*/
 	}	
 }
 
 int STATE = 0;
 int DIG = 0;
+
 void menu(void){
 	
-	checkPressed();
+	//checkPressed();
 	
 	switch(STATE){
 		case 0:
@@ -447,21 +457,25 @@ void menu(void){
 					case 3:
 						STATE = 5;
 						pressed = false;
+						DISP = false;
 						lcd.clear();
 						lcd.setCursor(1, 0);
 						lcd.print(F("Autotune :"));
 						lcd.setCursor(11, 0);
-						if(vars[TUNING]){
+						if(vars[TUNING] > 0){
 							lcd.print(F("ON"));
 						}else{
 							lcd.print(F("OFF"));
 						}
 						lcd.setCursor(1, 1);
-						lcd.print(F("Calibrate"));
+						lcd.print(F("Calibrate:"));
+						lcd.setCursor(11, 1);
+						lcd.print(String(vars[CALIBRATION]));
 						lcd.setCursor(1, 2);
 						lcd.print(F("Setpoint"));
 						lcd.setCursor(1, 3);
 						lcd.print(F("Back"));
+						cursor = 0;
 						break;
 				}
 				break;
@@ -501,8 +515,8 @@ void menu(void){
 			lcd.noCursor();
 			lcd.setCursor(11,0);
 			if(butDir != 0){
-				vars[SETPOINT] += double(butDir * pow(10, 2-STATE));
-				lcd.print(String(vars[SETPOINT]));
+				vars[SETPOINT] += double(butDir * pow(10.0, 2-STATE));
+				lcd.print(String(vars[SETPOINT]) + " ");
 			}
 			butDir = 0;
 			break;
@@ -510,16 +524,19 @@ void menu(void){
 		case 5:
 			lcd.setCursor(0, cursor);
 			lcd.print(char(126));
-			if(pressed){
+			checkPressed();
+			if(pressed){			
 				switch(cursor){
 					case 0:
 						changeAutoTune();
 						lcd.setCursor(11, 0);
-						if(vars[TUNING]){
-							lcd.print("ON");
+						if(vars[TUNING] > 0){
+							lcd.print(F("ON "));
 						}else{
-							lcd.print("OFF");
+							lcd.print(F("OFF"));
 						}
+						pressed = false;
+						pressing = false;
 						break;
 					case 1:
 						break;
@@ -527,6 +544,16 @@ void menu(void){
 						break;
 					case 3:
 						STATE = 0;
+						DISP = true;
+						lcd.clear();
+						lcd.setCursor(1, 0);
+						lcd.print(F("Setpoint:"));
+						lcd.setCursor(1, 2);
+						lcd.print(F("Temp C:"));
+						lcd.setCursor(1, 3);
+						lcd.print(F("MENU"));
+						DisplayTemp(vars[INPUT]);
+						cursor = 0;
 						break;
 				}
 				pressed = false;
@@ -557,8 +584,12 @@ void loop(void) {
 	//u8g.firstPage();  /***<-- DONT MOVE THIS??***/
 	rtd_ptr = &RTD_CH0;
 	rtd_ch0.MAX31865_full_read(rtd_ptr);          // Update MAX31855 readings
+
+	checkPressed();
 	
-	menu();
+	if(butDir != 0 || pressing || pressed){
+		menu();
+	}
 	
 	if(0 == RTD_CH0.status)                       // no fault, print info to serial port
 	{ 
@@ -566,7 +597,7 @@ void loop(void) {
 		double tempIn = (double)RTD_CH0.rtd_res_raw;
 		// calculate RTD resistance
 		
-		tmp = (tempIn / 32) - CALIBRATION; // <-sensor calibration
+		tmp = (tempIn / 32) + vars[CALIBRATION]; // <-sensor calibration
 		
 		tempAvg += tmp;
 		runningAvg = tempAvg / tempTemp;
