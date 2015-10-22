@@ -131,6 +131,7 @@ bool lalarmOn = false;
 bool halarmOn = false;
 int cursor = 0;
 bool DISP = true;  //Whether or not to display temp data on LCD
+bool OVERRIDE = false;
 
 void Alarm(bool on){
 	if (on){
@@ -461,7 +462,8 @@ void menu(void){
 	//checkPressed();
 	
 	switch(STATE){
-		case 0:
+		case 0://**********************READOUT/MAIN SCREEN*********************
+			OVERRIDE = false;
 			if(pressed){
 				switch(cursor){
 					case 0:
@@ -494,48 +496,17 @@ void menu(void){
 				}
 				break;
 			}
-			if(butDir != 0){
-
-				lcd.setCursor(0,cursor);
-				lcd.print(" ");
-				cursor += butDir;
-				if(cursor > 3){
-					cursor = 0;
-				}
-				if(cursor < 0){
-					cursor = 3;
-				}
-				lcd.setCursor(0, cursor);
-				lcd.print(char(126));
-				butDir = 0;
-			}
+			CursorHandler();
 			break;
 			
 		case 1:
+			EnterData(&vars[SETPOINT], 0, 11, 0, -1);
+			break;
 		case 2:
 		case 3:
-		case 4:{
-			if(pressed){
-				STATE += 1;
-				if(STATE > 4) STATE = 0;
-				pressed = false;
-				break;
-			}
-			
-			int off = STATE;
-			if(off > 2) off += 1;
-			lcd.setCursor(10 + off, 0);
-			lcd.cursor();
-			lcd.noCursor();
-			lcd.setCursor(11,0);
-			if(butDir != 0){
-				vars[SETPOINT] += double(butDir * pow(10.0, 2-STATE));
-				lcd.print(String(vars[SETPOINT]) + " ");
-			}
-			butDir = 0;
-			break;
-		}
+		case 4:
 		case 5://******************************MENU****************************
+			OVERRIDE = false;
 			lcd.setCursor(0, cursor);
 			lcd.print(char(126));
 			checkPressed();
@@ -552,11 +523,11 @@ void menu(void){
 						pressed = false;
 						pressing = false;
 						break;
-					case 1://*****************TEMP CALIBRATION*****************
+					case 1://*****************GOTO CALIBRATION*****************
 						STATE = 6;
 						pressed = false;
 						break;
-					case 2://*****************CALI DATA************************
+					case 2://*****************GOTO CALI DATA************************
 						STATE = 7;
 						pressed = false;
 						break;
@@ -578,34 +549,39 @@ void menu(void){
 				pressed = false;
 				break;
 			}
-			if(butDir != 0){
-				lcd.setCursor(0,cursor);
-				lcd.print(" ");
-				cursor += butDir;
-				if(cursor > 3){
-					cursor = 0;
-				}
-				if(cursor < 0){
-					cursor = 3;
-				}
-				lcd.setCursor(0, cursor);
-				lcd.print(char(126));
-				butDir = 0;
-			}
+			CursorHandler();
 			break;
-		case 6://*****************CALIBRATION***********************
+		case 6://*****************TEMP CALIBRATION***********************
 		{
-			EnterData(&vars[CALIBRATION], 1, 10, 5);
-			butDir = 0;
+			EnterData(&vars[CALIBRATION], 1, 11, 5, 1);
 			break;
 		}
 		case 7:
 			butDir = 0;
+			STATE = 5;
 			break;
 	}
 }
 
-void EnterData(double *var, int row, int col, int RetState){
+void CursorHandler(void){
+	if(butDir != 0){
+		lcd.setCursor(0,cursor);
+		lcd.print(" ");
+		cursor += butDir;
+		if(cursor > 3){
+			cursor = 0;
+		}
+		if(cursor < 0){
+			cursor = 3;
+		}
+		lcd.setCursor(0, cursor);
+		lcd.print(char(126));
+		butDir = 0;
+	}	
+}
+
+void EnterData(double *var, int row, int col, int RetState, int decOff){
+	OVERRIDE = true;
 	if(pressed){
 		DIG += 1;
 		if(DIG > 4){
@@ -617,15 +593,17 @@ void EnterData(double *var, int row, int col, int RetState){
 	}
 			
 	int off = DIG;
-	if(off > 3) off += 1;
-	lcd.setCursor(col + off, row);
+	if(off > 2) off += 1;
+	lcd.setCursor(col + off + decOff, row);
 	lcd.cursor();
+	delay(10);
 	lcd.noCursor();
-	lcd.setCursor(col + 1, row);
+	lcd.setCursor(col, row);
 	if(butDir != 0){
 		*var += double(butDir * pow(10.0, 2-DIG));
 		lcd.print(String(*var) + " ");
-	}	
+	}
+	butDir = 0;	
 }
 
 
@@ -636,7 +614,7 @@ void loop(void) {
 
 	checkPressed();
 	
-	if(butDir != 0 || pressing || pressed){
+	if(butDir != 0 || pressing || pressed || OVERRIDE){
 		menu();
 	}
 	
