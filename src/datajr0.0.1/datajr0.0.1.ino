@@ -15,9 +15,7 @@
 *    MISO: pin 12  MISO: pin 50  -->  SDO (must not be changed for hardware SPI)
 *    SCK:  pin 13  SCK:  pin 52  -->  SCLK (must not be changed for hardware SPI)
 ***************************************************************************/
-double vars[20] = {0};
-const int OFFSET = 33;
-const int VARTOTAL = 10;
+
 /*************************************************************
 ASCII offset + 33
 variable table
@@ -32,6 +30,27 @@ $ P             3
 ) LALARM        8
 * CALIBRATION	9
 **************************************************************/
+
+/**************************************************************
+PINOUT TABLE
+A0 - Relay output
+A4 - Display
+A5 - Display
+Rotary encoder A - D2
+Rotary encoder B - D3
+Alarm - D4
+Rotary encoder R -
+Rotary encoder G -
+Rotary encoder B -
+**************************************************************/
+//const int RelayPin = 2;  CHANGED TO A0
+const int ROTARY_A = 2;
+const int ROTARY_B = 3;
+const int ALARM_PIN = 4;
+
+double vars[20] = {0};
+const int OFFSET = 33;
+const int VARTOTAL = 10; //must be set to number of vars
 const int IN       = 0;
 const int OUT      = 1;
 const int SETPOINT = 2;
@@ -46,7 +65,7 @@ const int CALIBRATION = 9;
 Bounce button = Bounce();
 
 #include <rotary.h>
-Rotary r = Rotary(2, 3);
+Rotary r = Rotary(ROTARY_A, ROTARY_B);
 #include <Arduino.h>
 #include <Math.h>
 //#include "U8glib.h" //serial lcd library
@@ -76,13 +95,8 @@ const int D7_pin =  7;
 
 LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,BACKLIGHT_PIN, POSITIVE);
 
-//const int RelayPin = 2;  CHANGED TO A0
-const int ALARM_PIN = 4;
 const unsigned long SERIAL_BAUD = 115200;
 const int SERIAL_MIN_BITS = 4;
-
-/*** Display vars ***/
-//U8GLIB_ST7920_128X64 u8g(6, 8, 7, U8G_PIN_NONE);    //SCK, SID, CS
 
 /*** PID vars ***/
 int WindowSize = 5000;     //PID variables
@@ -440,7 +454,7 @@ void checkPressed(void){
 }
 
 int STATE = 0;
-int DIG = 0;
+int DIG = 1;
 
 void menu(void){
 	
@@ -472,7 +486,7 @@ void menu(void){
 						lcd.setCursor(11, 1);
 						lcd.print(String(vars[CALIBRATION]));
 						lcd.setCursor(1, 2);
-						lcd.print(F("Setpoint"));
+						lcd.print(F("Cali Data"));
 						lcd.setCursor(1, 3);
 						lcd.print(F("Back"));
 						cursor = 0;
@@ -521,7 +535,7 @@ void menu(void){
 			butDir = 0;
 			break;
 		}
-		case 5:
+		case 5://******************************MENU****************************
 			lcd.setCursor(0, cursor);
 			lcd.print(char(126));
 			checkPressed();
@@ -539,6 +553,8 @@ void menu(void){
 						pressing = false;
 						break;
 					case 1:
+						STATE = 6;
+						pressed = false;
 						break;
 					case 2:
 						break;
@@ -574,7 +590,29 @@ void menu(void){
 				butDir = 0;
 			}
 			break;
+		case 6://*****************CALIBRATION***********************
+			if(pressed){
+				DIG += 1;
+				if(DIG > 4){
+					STATE = 5;
+					DIG = 1;
+				}
+				pressed = false;
+				break;
+			}
 			
+			int off = DIG;
+			if(off > 3) off += 1;
+			lcd.setCursor(10 + off, 0);
+			lcd.cursor();
+			lcd.noCursor();
+			lcd.setCursor(11, 1);
+			if(butDir != 0){
+				vars[CALIBRATION] += double(butDir * pow(10.0, 2-DIG));
+				lcd.print(String(vars[CALIBRATION]) + " ");
+			}
+			butDir = 0;
+			break;
 	}
 }
 
