@@ -541,7 +541,7 @@ void menu(void){
 			checkPressed();
 			if(pressed){			
 				switch(cursor){
-					case 0:
+					case 0://*****************AUTOTUNE*************************
 						changeAutoTune();
 						lcd.setCursor(11, 0);
 						if(vars[TUNING] > 0){
@@ -552,11 +552,13 @@ void menu(void){
 						pressed = false;
 						pressing = false;
 						break;
-					case 1:
+					case 1://*****************TEMP CALIBRATION*****************
 						STATE = 6;
 						pressed = false;
 						break;
-					case 2:
+					case 2://*****************CALI DATA************************
+						STATE = 7;
+						pressed = false;
 						break;
 					case 3:
 						STATE = 0;
@@ -570,6 +572,7 @@ void menu(void){
 						lcd.print(F("MENU"));
 						DisplayTemp(vars[INPUT]);
 						cursor = 0;
+						pressed = false;
 						break;
 				}
 				pressed = false;
@@ -591,31 +594,39 @@ void menu(void){
 			}
 			break;
 		case 6://*****************CALIBRATION***********************
-			if(pressed){
-				DIG += 1;
-				if(DIG > 4){
-					STATE = 5;
-					DIG = 1;
-				}
-				pressed = false;
-				break;
-			}
-			
-			int off = DIG;
-			if(off > 3) off += 1;
-			lcd.setCursor(10 + off, 0);
-			lcd.cursor();
-			lcd.noCursor();
-			lcd.setCursor(11, 1);
-			if(butDir != 0){
-				vars[CALIBRATION] += double(butDir * pow(10.0, 2-DIG));
-				lcd.print(String(vars[CALIBRATION]) + " ");
-			}
+		{
+			EnterData(&vars[CALIBRATION], 1, 10, 5);
+			butDir = 0;
+			break;
+		}
+		case 7:
 			butDir = 0;
 			break;
 	}
 }
 
+void EnterData(double *var, int row, int col, int RetState){
+	if(pressed){
+		DIG += 1;
+		if(DIG > 4){
+			STATE = RetState;
+			DIG = 1;
+		}
+		pressed = false;
+		return;
+	}
+			
+	int off = DIG;
+	if(off > 3) off += 1;
+	lcd.setCursor(col + off, row);
+	lcd.cursor();
+	lcd.noCursor();
+	lcd.setCursor(col + 1, row);
+	if(butDir != 0){
+		*var += double(butDir * pow(10.0, 2-DIG));
+		lcd.print(String(*var) + " ");
+	}	
+}
 
 
 void loop(void) {
