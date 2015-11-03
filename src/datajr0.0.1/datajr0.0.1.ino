@@ -490,10 +490,52 @@ void checkPressed(void){
 int STATE = 0;
 int DIG = 1;
 
+void MainMenu(void){
+	lcd.clear();
+	lcd.setCursor(1, 0);
+	lcd.print(F("Autotune :"));
+	lcd.setCursor(11, 0);
+	if(vars[TUNING] > 0){
+		lcd.print(F("ON"));
+	}else{
+		lcd.print(F("OFF"));
+	}
+	lcd.setCursor(1, 1);
+	lcd.print(F("Calibrate:"));
+	lcd.setCursor(11, 1);
+	lcd.print(String(vars[CALIBRATION]));
+	lcd.setCursor(1, 2);
+	lcd.print(F("Cali Data"));
+	lcd.setCursor(1, 3);
+	lcd.print(F("BACK"));	
+}
+
+void SmartA(void){
+	lcd.clear();
+	lcd.setCursor(1, 0);
+	lcd.print(F("Z Before:"));
+	lcd.setCursor(1, 1);
+	lcd.print(F("Z After :"));
+	lcd.setCursor(1, 2);
+	lcd.print(F("X       :"));
+	lcd.setCursor(1, 3);
+	lcd.print(F("NEXT"));
+}
+
+void CaliMenu(void){
+	lcd.clear();
+	lcd.setCursor(1, 0);
+	lcd.print(F("Smart A"));
+	lcd.setCursor(1, 1);
+	lcd.print(F("Smart XP"));
+	lcd.setCursor(1, 3);
+	lcd.print(F("BACK"));
+}
+
 void menu(void){
-	
 	switch(STATE){
 		case 0://**********************READOUT/MAIN SCREEN*********************
+			CursorHandler();
 			OVERRIDE = false;
 			if(pressed){
 				switch(cursor){
@@ -505,38 +547,22 @@ void menu(void){
 						STATE = 5;
 						pressed = false;
 						DISP = false;
-						lcd.clear();
-						lcd.setCursor(1, 0);
-						lcd.print(F("Autotune :"));
-						lcd.setCursor(11, 0);
-						if(vars[TUNING] > 0){
-							lcd.print(F("ON"));
-						}else{
-							lcd.print(F("OFF"));
-						}
-						lcd.setCursor(1, 1);
-						lcd.print(F("Calibrate:"));
-						lcd.setCursor(11, 1);
-						lcd.print(String(vars[CALIBRATION]));
-						lcd.setCursor(1, 2);
-						lcd.print(F("Cali Data"));
-						lcd.setCursor(1, 3);
-						lcd.print(F("Back"));
+						MainMenu();
 						cursor = 0;
 						break;
 				}
 				break;
 			}
-			CursorHandler();
 			break;
 			
 		case 1:
-			EnterData(&vars[SETPOINT], 0, 11, 0, -1);
+			EnterData(&vars[SETPOINT], 0, 11, 0, -1, 2);
 			break;
 		case 2:
 		case 3:
 		case 4:
 		case 5://******************************MENU****************************
+			CursorHandler();
 			OVERRIDE = false;
 			lcd.setCursor(0, cursor);
 			lcd.print(char(126));
@@ -560,6 +586,8 @@ void menu(void){
 						break;
 					case 2://*****************GOTO CALI DATA************************
 						STATE = 7;
+						cursor = 0;
+						CaliMenu();
 						pressed = false;
 						break;
 					case 3:
@@ -580,55 +608,102 @@ void menu(void){
 				pressed = false;
 				break;
 			}
-			CursorHandler();
 			break;
 		case 6://*****************TEMP CALIBRATION***********************
 		{
-			EnterData(&vars[CALIBRATION], 1, 11, 5, 1);
+			EnterData(&vars[CALIBRATION], 1, 11, 5, 1, 2);
 			break;
 		}
 		case 7://*****************CALI DATA MENU*************************
-			lcd.print(F("Smart A"));
-			lcd.setCursor(1,1);
-			lcd.print(F("Smart XP"));
-			checkPressed();
 			CursorHandler();
+			checkPressed();
 			if(pressed){			
 				switch(cursor){
 					case 0:
 						STATE = 8;
+						SmartA();
+						cursor = 0;
+						pressed = false;
 						break;
 					case 1:
 						STATE = 9;
+						pressed = false;
+						break;
+					case 3:
+						STATE = 5;
+						MainMenu();
+						pressed = false;
 						break;
 				}
 			}
 			break;
 		case 8://*****************SMART A*********************************
 			CursorHandler();
-			lcd.setCursor(1, 0);
-			lcd.print(F("Z Before:"));
-			lcd.setCursor(1, 1);
-			lcd.print(F("Z After :"));
-			lcd.setCursor(1, 2);
-			lcd.print(F("Y       :"));
-			lcd.setCursor(1, 3);
-			lcd.print(F("Z       :"));
 			checkPressed();
 			if(pressed){
 				switch(cursor){
 					case 0:
-						EnterData(&vars[DATA1], 10, 0, 8, 1);
+						STATE = 10;
+						break;
 					case 1:
-						EnterData(&vars[DATA2], 10, 1, 8, 1);
+						STATE = 11;
+						break;
 					case 2:
-						EnterData(&vars[DATA3], 10, 2, 8, 1);
+						STATE = 12;
+						break;
 					case 3:
-						EnterData(&vars[DATA4], 10, 3, 8, 1);
+						STATE = 13;
+						lcd.clear();
+						lcd.setCursor(1, 0);
+						lcd.print(F("Y       :"));
+						lcd.setCursor(1, 1);
+						lcd.print(F("Send Data"));
+						lcd.setCursor(1, 2);
+						lcd.print(F("MAIN MENU"));
+						lcd.setCursor(1, 3);
+						lcd.print(F("BACK"));
+						break;
 				}
+				pressed = false;
 			}
 			break;
 		case 9:
+			break;
+		case 10:
+			EnterData(&vars[DATA1], 0, 10, 8, 1, 3);
+			break;
+		case 11:
+			EnterData(&vars[DATA1], 1, 10, 8, 1, 3);
+			break;
+		case 12:
+			EnterData(&vars[DATA1], 2, 10, 8, 1, 3);
+			break;
+		case 13:
+			CursorHandler();
+			checkPressed();
+			if(pressed){
+				switch(cursor){
+					case 0:
+						STATE = 14;
+						break;
+					case 1:
+						STATE = 7;
+						CaliMenu();
+						break;
+					case 2:
+						STATE = 5;
+						MainMenu();
+						break;
+					case 3:
+						STATE = 8;
+						SmartA();
+						break;
+				}
+				pressed = false;
+			}
+			break;
+		case 14:
+			EnterData(&vars[DATA4], 0, 10, 13, 1, 3);
 			break;
 	}
 }
@@ -650,8 +725,9 @@ void CursorHandler(void){
 	}	
 }
 
-void EnterData(double *var, int row, int col, int RetState, int decOff){
+void EnterData(double *var, int row, int col, int RetState, int decOff, int prec){
 	OVERRIDE = true;
+	char tempString[10];
 	if(pressed){
 		DIG += 1;
 		if(DIG > 4){
@@ -671,7 +747,8 @@ void EnterData(double *var, int row, int col, int RetState, int decOff){
 	lcd.setCursor(col, row);
 	if(butDir != 0){
 		*var += double(butDir * pow(10.0, 2-DIG));
-		lcd.print(String(*var) + " ");
+		dtostrf(*var, 3, prec, tempString);
+		lcd.print(String(tempString) + " ");
 	}
 	butDir = 0;	
 }
