@@ -29,6 +29,11 @@ $ P             3
 ( HALARM        7
 ) LALARM        8
 * CALIBRATION	9
++ DATA1			10
+, DATA2			11
+- DATA3			12
+. DATA4			13
+/ MACH_ID		14
 **************************************************************/
 
 /**************************************************************
@@ -50,18 +55,24 @@ const int ROTARY_B = 2;
 const int BUTTON_PIN = 5;
 
 double vars[20] = {0};
-const int OFFSET = 33;
-const int VARTOTAL = 10; //must be set to number of vars
-const int IN       = 0;
-const int OUT      = 1;
-const int SETPOINT = 2;
-const int PGAIN    = 3;
-const int IGAIN    = 4;
-const int DGAIN    = 5;
-const int TUNING   = 6;
-const int HALARM   = 7;     
-const int LALARM   = 8;
+const int OFFSET 	= 33;
+const int VARTOTAL 	= 15; //must be set to number of vars
+const int IN       	= 0;
+const int OUT      	= 1;
+const int SETPOINT 	= 2;
+const int PGAIN    	= 3;
+const int IGAIN    	= 4;
+const int DGAIN    	= 5;
+const int TUNING   	= 6;
+const int HALARM   	= 7;     
+const int LALARM   	= 8;
 const int CALIBRATION = 9;
+const int DATA1		= 10;
+const int DATA2		= 11;
+const int DATA3		= 12;
+const int DATA4		= 13;
+const int MACH_ID	= 14;
+
 //#include <Bounce2.h>
 //Bounce button = Bounce();
 
@@ -381,6 +392,10 @@ void setup(void) {
 	SetupSPI();
 	SetupAlarm();
 	SetupLCD();
+	SetupEncoder();
+}
+
+void SetupEncoder(void){
 	pinMode(4, OUTPUT);
 	digitalWrite(4, LOW);
 	pinMode(BUTTON_PIN, INPUT);
@@ -567,9 +582,48 @@ void menu(void){
 			EnterData(&vars[CALIBRATION], 1, 11, 5, 1);
 			break;
 		}
-		case 7:
-			butDir = 0;
-			STATE = 5;
+		case 7://*****************CALI DATA MENU*************************
+			lcd.print(F("Smart A"));
+			lcd.setCursor(1,1);
+			lcd.print(F("Smart XP"));
+			checkPressed();
+			CursorHandler();
+			if(pressed){			
+				switch(cursor){
+					case 0:
+						STATE = 8;
+						break;
+					case 1:
+						STATE = 9;
+						break;
+				}
+			}
+			break;
+		case 8://*****************SMART A*********************************
+			CursorHandler();
+			lcd.setCursor(1, 0);
+			lcd.print(F("Z Before:"));
+			lcd.setCursor(1, 1);
+			lcd.print(F("Z After :"));
+			lcd.setCursor(1, 2);
+			lcd.print(F("Y       :"));
+			lcd.setCursor(1, 3);
+			lcd.print(F("Z       :"))
+			checkPressed();
+			if(pressed){
+				switch(cursor){
+					case 0:
+						EnterData(&vars[DATA1])
+					case 1:
+						EnterData(&vars[DATA2])
+					case 2:
+						EnterData(&vars[DATA3])
+					case 3:
+						EnterData(&vars[DATA4])
+				}
+			}
+			break;
+		case 9:
 			break;
 	}
 }
