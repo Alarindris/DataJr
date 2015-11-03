@@ -354,6 +354,11 @@ void SetupVars(void){
 	if(isnan(vars[CALIBRATION]) == 1){
 		vars[CALIBRATION] = -256.552;
 	}
+	vars[DATA1] = 0.0;
+	vars[DATA2] = 0.0;
+	vars[DATA3] = 0.0;
+	vars[DATA4] = 0.0;
+	vars[MACH_ID] = 0.0;
 };
 
 void WriteVars(void){
@@ -608,18 +613,18 @@ void menu(void){
 			lcd.setCursor(1, 2);
 			lcd.print(F("Y       :"));
 			lcd.setCursor(1, 3);
-			lcd.print(F("Z       :"))
+			lcd.print(F("Z       :"));
 			checkPressed();
 			if(pressed){
 				switch(cursor){
 					case 0:
-						EnterData(&vars[DATA1])
+						EnterData(&vars[DATA1], 10, 0, 8, 1);
 					case 1:
-						EnterData(&vars[DATA2])
+						EnterData(&vars[DATA2], 10, 1, 8, 1);
 					case 2:
-						EnterData(&vars[DATA3])
+						EnterData(&vars[DATA3], 10, 2, 8, 1);
 					case 3:
-						EnterData(&vars[DATA4])
+						EnterData(&vars[DATA4], 10, 3, 8, 1);
 				}
 			}
 			break;
