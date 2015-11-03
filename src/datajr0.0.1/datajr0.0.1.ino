@@ -33,20 +33,21 @@ $ P             3
 
 /**************************************************************
 PINOUT TABLE
-A0 - Relay output
-A4 - Display
-A5 - Display
-Rotary encoder A - D2
-Rotary encoder B - D3
-Alarm - D4
-Rotary encoder R -
-Rotary encoder G -
-Rotary encoder B -
+Alarm 				- A0
+Display				- A4
+Display				- A5
+Rotary encoder A 	- D2
+Rotary encoder B 	- D3
+Rotary encoder R 	- D4
+Rotary encoder G 	- D5
+Rotary encoder B 	- D7
+Relay output	 	- D8
 **************************************************************/
-//const int RelayPin = 2;  CHANGED TO A0
-const int ROTARY_A = 2;
-const int ROTARY_B = 3;
-const int ALARM_PIN = 4;
+const int RELAY_PIN = 8;
+const int ROTARY_A = 3;
+const int ROTARY_B = 2;
+#define ALARM_PIN A0
+const int BUTTON_PIN = 5;
 
 double vars[20] = {0};
 const int OFFSET = 33;
@@ -61,8 +62,8 @@ const int TUNING   = 6;
 const int HALARM   = 7;     
 const int LALARM   = 8;
 const int CALIBRATION = 9;
-#include <Bounce2.h>
-Bounce button = Bounce();
+//#include <Bounce2.h>
+//Bounce button = Bounce();
 
 #include <rotary.h>
 Rotary r = Rotary(ROTARY_A, ROTARY_B);
@@ -99,7 +100,7 @@ const unsigned long SERIAL_BAUD = 115200;
 const int SERIAL_MIN_BITS = 4;
 
 /*** PID vars ***/
-int WindowSize = 5000;     //PID variables
+int WindowSize = 10000;     //PID variables
 unsigned long windowStartTime;
 //int direction = REVERSE;
 PID myPID(&vars[IN], &vars[OUT], &vars[SETPOINT],19432.63, 807.59,0, 1);  // create PID variable  REVERSE = COOL = 1  DIRECT = HEAT = 0
@@ -276,7 +277,7 @@ void SetupAutoTune(void){
 }
 
 void SetupPID(void){
-	pinMode(A0, OUTPUT);
+	pinMode(RELAY_PIN, OUTPUT);
 	windowStartTime = millis(); //initialize the variables we're linked to
 	myPID.SetOutputLimits(0, WindowSize);  //tell the PID to range between 0 and the full window size
 	myPID.SetMode(AUTOMATIC); //turn the PID on
@@ -381,9 +382,12 @@ void setup(void) {
 	SetupAlarm();
 	SetupLCD();
 	pinMode(4, OUTPUT);
-	pinMode(5, OUTPUT);
-	button.attach(7);
-	button.interval(5);
+	digitalWrite(4, LOW);
+	pinMode(BUTTON_PIN, INPUT);
+	pinMode(6, OUTPUT);
+	digitalWrite(6, LOW);
+	pinMode(7, OUTPUT);
+	digitalWrite(7, LOW);
 	PCICR |= (1 << PCIE2);
 	PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
 	sei();
@@ -404,62 +408,69 @@ void AlarmCheck(double t){
 }
 
 void OutputCheck(void){
+	bool changed = false;
 	if(vars[OUT] > millis() - windowStartTime && vars[OUT] > 1000 && outputOn == false){
 		outputOn = true;
-		digitalWrite(A0,HIGH);
+		changed = true;
+		digitalWrite(RELAY_PIN,HIGH);
 		Serial.println(F("_"));
 		Serial.println(F("on "));
 	}
 	if(vars[OUT] < millis() - windowStartTime && outputOn == true){
 		outputOn = false;
-		digitalWrite(A0,LOW);
+		changed = true;
+		digitalWrite(RELAY_PIN,LOW);
 		Serial.println(F("_"));
 		Serial.println(F("off"));
+	}
+	
+	if(changed){
+		lcd.setCursor(14, 3);
+		if(outputOn){
+			lcd.print(F("Off   "));
+		}else{
+			lcd.print(F("Active"));
+		}
 	}
 }
 
 int butDir = 0;
 
 ISR(PCINT2_vect) {
-unsigned char result = r.process();
-if (result) {
-	if(result == DIR_CW){
-		butDir = 1;
-		digitalWrite(4, HIGH);
-		digitalWrite(5, LOW);
-	}else{
-		butDir = -1;
-		digitalWrite(4, LOW);
-		digitalWrite(5, HIGH);
+	unsigned char result = r.process();
+	if (result) {
+		if(result == DIR_CW){
+			butDir = 1;
+			digitalWrite(4, HIGH);
+			digitalWrite(7, LOW);
+		}else{
+			butDir = -1;
+			digitalWrite(4, LOW);
+			digitalWrite(7, HIGH);
+		}
 	}
-}
 }
 
 bool pressing = false;
 bool pressed = false;
 
 void checkPressed(void){
-	if(digitalRead(7) == LOW){
+	Serial.println(String(digitalRead(BUTTON_PIN)));
+	if(digitalRead(BUTTON_PIN) == HIGH){
 		pressing = true;
 		butDir = 0;
 	}else{
 		if(pressing == true && pressed == false){
 			pressed = true;
 			pressing = false;
-		}/*
-		if(pressing == true && pressed == true){
-			pressed = false;
-			pressing = false;
-		}*/
-	}	
+		}
+	}
 }
 
 int STATE = 0;
 int DIG = 1;
 
 void menu(void){
-	
-	//checkPressed();
 	
 	switch(STATE){
 		case 0://**********************READOUT/MAIN SCREEN*********************
