@@ -507,7 +507,7 @@ void MainMenu(void){
 	lcd.setCursor(1, 2);
 	lcd.print(F("Cali Data"));
 	lcd.setCursor(1, 3);
-	lcd.print(F("BACK"));	
+	lcd.print(F("NEXT"));	
 }
 
 void SmartA(void){
@@ -530,6 +530,19 @@ void CaliMenu(void){
 	lcd.print(F("Smart XP"));
 	lcd.setCursor(1, 3);
 	lcd.print(F("BACK"));
+}
+
+void DisplayScreen(void){
+	STATE = 0;
+	DISP = true;
+	lcd.clear();
+	lcd.setCursor(1, 0);
+	lcd.print(F("Setpoint:"));
+	lcd.setCursor(1, 2);
+	lcd.print(F("Temp C:"));
+	lcd.setCursor(1, 3);
+	lcd.print(F("MENU"));
+	DisplayTemp(vars[INPUT]);
 }
 
 void menu(void){
@@ -587,21 +600,18 @@ void menu(void){
 						CaliMenu();
 						break;
 					case 3:
-						STATE = 0;
-						DISP = true;
+						STATE = 17;
 						lcd.clear();
 						lcd.setCursor(1, 0);
-						lcd.print(F("Setpoint:"));
-						lcd.setCursor(1, 2);
-						lcd.print(F("Temp C:"));
+						lcd.print(F("Window: "));
 						lcd.setCursor(1, 3);
-						lcd.print(F("MENU"));
-						DisplayTemp(vars[INPUT]);
+						lcd.print(F("MAIN MENU"));
+						pressed = false;
 						cursor = 0;
 						break;
 				}
 				pressed = false;
-				break;
+				//break;
 			}
 			break;
 		case 6://*****************TEMP CALIBRATION***********************
@@ -740,6 +750,28 @@ void menu(void){
 			STATE = 5;
 			MainMenu();
 			break;
+		case 17:
+			OVERRIDE = false;
+			CursorHandler();
+			checkPressed();
+			if(pressed){
+				switch(cursor){
+					case 0:
+						STATE = 18;
+						break;
+					case 3:
+						STATE = 0;
+						DisplayScreen();
+						break;
+				}
+				
+				pressed = false;
+			}
+			break;
+		case 18:
+			EnterDataInt(&multiSample, 0, 10, 17, -1, 2, 4);
+			break;
+			
 	}
 }
 
@@ -790,6 +822,39 @@ void EnterData(double *var, int row, int col, int RetState, int decOff, int prec
 		*var += double(butDir * pow(10.0, 2-DIG));
 		dtostrf(*var, 3, prec, tempString);
 		lcd.print(String(tempString) + " ");
+	}
+	butDir = 0;	
+}
+
+void EnterDataInt(int *var, int row, int col, int RetState, int decOff, int prec, int digs){
+	OVERRIDE = true;
+	int neg = 0;
+	char tempString[10];
+	if(pressed){
+		DIG += 1;
+		if(DIG > digs){
+			STATE = RetState;
+			DIG = 1;
+		}
+		pressed = false;
+		return;
+	}
+			
+	int off = DIG;
+	if(off > 2) off += 1;
+	if(*var <= -10){
+		neg = 1;
+	}else{
+		neg = 0;
+	}
+	lcd.setCursor(col + off + decOff + neg, row);
+	lcd.cursor();
+	delay(10);
+	lcd.noCursor();
+	lcd.setCursor(col, row);
+	if(butDir != 0){
+		*var += butDir * pow(10, digs - DIG);
+		lcd.print(String(*var) + " ");
 	}
 	butDir = 0;	
 }
