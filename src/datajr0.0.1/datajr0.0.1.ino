@@ -56,7 +56,7 @@ const int BUTTON_PIN = 5;
 
 double vars[20] = {0};
 const int OFFSET 	= 33;
-const int VARTOTAL 	= 15; //must be set to number of vars
+const int VARTOTAL 	= 10; //must be set to number of vars to be sent/backed up
 const int IN       	= 0;
 const int OUT      	= 1;
 const int SETPOINT 	= 2;
@@ -136,7 +136,7 @@ PWFusion_MAX31865_RTD rtd_ch0(CS0_PIN);         //create rtd sensor variables
 int tempTemp = 0;
 double tempAvg = 0;
 double tmp, runningAvg;
-int multiSample = WindowSize;
+int multiSample = 1000;
 bool outputOn = false;
 bool alarmOn = false;
 bool lalarmOn = false;
@@ -358,7 +358,7 @@ void SetupVars(void){
 	vars[DATA2] = 0.0;
 	vars[DATA3] = 0.0;
 	vars[DATA4] = 0.0;
-	vars[MACH_ID] = 0.0;
+	vars[MACH_ID] = -1;
 };
 
 void WriteVars(void){
@@ -556,7 +556,7 @@ void menu(void){
 			break;
 			
 		case 1:
-			EnterData(&vars[SETPOINT], 0, 11, 0, -1, 2);
+			EnterData(&vars[SETPOINT], 0, 11, 0, -1, 2, 4);
 			break;
 		case 2:
 		case 3:
@@ -577,18 +577,14 @@ void menu(void){
 						}else{
 							lcd.print(F("OFF"));
 						}
-						pressed = false;
-						pressing = false;
 						break;
 					case 1://*****************GOTO CALIBRATION*****************
 						STATE = 6;
-						pressed = false;
 						break;
 					case 2://*****************GOTO CALI DATA************************
 						STATE = 7;
 						cursor = 0;
 						CaliMenu();
-						pressed = false;
 						break;
 					case 3:
 						STATE = 0;
@@ -602,7 +598,6 @@ void menu(void){
 						lcd.print(F("MENU"));
 						DisplayTemp(vars[INPUT]);
 						cursor = 0;
-						pressed = false;
 						break;
 				}
 				pressed = false;
@@ -611,7 +606,7 @@ void menu(void){
 			break;
 		case 6://*****************TEMP CALIBRATION***********************
 		{
-			EnterData(&vars[CALIBRATION], 1, 11, 5, 1, 2);
+			EnterData(&vars[CALIBRATION], 1, 11, 5, 1, 2, 4);
 			break;
 		}
 		case 7://*****************CALI DATA MENU*************************
@@ -621,23 +616,31 @@ void menu(void){
 				switch(cursor){
 					case 0:
 						STATE = 8;
+						vars[MACH_ID] = 0;
 						SmartA();
 						cursor = 0;
-						pressed = false;
 						break;
 					case 1:
-						STATE = 9;
-						pressed = false;
+						STATE = 15;
+						lcd.clear();
+						lcd.setCursor(1, 0);
+						lcd.print(F("Pre"));
+						lcd.setCursor(1, 1);
+						lcd.print(F("Fine"));
+						lcd.setCursor(1, 3);
+						lcd.print(F("BACK"));
+						cursor = 0;
 						break;
 					case 3:
 						STATE = 5;
 						MainMenu();
-						pressed = false;
 						break;
 				}
+				pressed = false;
 			}
 			break;
 		case 8://*****************SMART A*********************************
+			OVERRIDE = false;
 			CursorHandler();
 			checkPressed();
 			if(pressed){
@@ -670,15 +673,16 @@ void menu(void){
 		case 9:
 			break;
 		case 10:
-			EnterData(&vars[DATA1], 0, 10, 8, 1, 3);
+			EnterData(&vars[DATA1], 0, 10, 8, -1, 3, 5);
 			break;
 		case 11:
-			EnterData(&vars[DATA1], 1, 10, 8, 1, 3);
+			EnterData(&vars[DATA2], 1, 10, 8, -1, 3, 5);
 			break;
 		case 12:
-			EnterData(&vars[DATA1], 2, 10, 8, 1, 3);
+			EnterData(&vars[DATA3], 2, 10, 8, -1, 3, 5);
 			break;
 		case 13:
+			OVERRIDE = false;
 			CursorHandler();
 			checkPressed();
 			if(pressed){
@@ -687,8 +691,7 @@ void menu(void){
 						STATE = 14;
 						break;
 					case 1:
-						STATE = 7;
-						CaliMenu();
+						STATE = 16;
 						break;
 					case 2:
 						STATE = 5;
@@ -703,7 +706,39 @@ void menu(void){
 			}
 			break;
 		case 14:
-			EnterData(&vars[DATA4], 0, 10, 13, 1, 3);
+			EnterData(&vars[DATA4], 0, 10, 13, -1, 3, 5);
+			break;
+		case 15:
+			CursorHandler();
+			checkPressed();
+			if(pressed){
+				switch(cursor){
+					case 0:
+						vars[MACH_ID] = 1;
+						STATE = 8;
+						SmartA();
+						break;
+					case 1:
+						vars[MACH_ID] = 2;
+						STATE = 8;
+						SmartA();
+						break;
+					case 3:
+						STATE = 7;
+						CaliMenu();
+						break;
+				}
+				cursor = 0;
+				pressed = false;
+			}
+			break;
+		case 16:
+			for(int i = 10; i < 14; i++){  //Loops through DATA vars[]
+				Serial.println(char(i + OFFSET));
+				Serial.println(vars[i]);
+			}
+			STATE = 5;
+			MainMenu();
 			break;
 	}
 }
@@ -725,12 +760,13 @@ void CursorHandler(void){
 	}	
 }
 
-void EnterData(double *var, int row, int col, int RetState, int decOff, int prec){
+void EnterData(double *var, int row, int col, int RetState, int decOff, int prec, int digs){
 	OVERRIDE = true;
+	int neg = 0;
 	char tempString[10];
 	if(pressed){
 		DIG += 1;
-		if(DIG > 4){
+		if(DIG > digs){
 			STATE = RetState;
 			DIG = 1;
 		}
@@ -740,7 +776,12 @@ void EnterData(double *var, int row, int col, int RetState, int decOff, int prec
 			
 	int off = DIG;
 	if(off > 2) off += 1;
-	lcd.setCursor(col + off + decOff, row);
+	if(*var <= -10){
+		neg = 1;
+	}else{
+		neg = 0;
+	}
+	lcd.setCursor(col + off + decOff + neg, row);
 	lcd.cursor();
 	delay(10);
 	lcd.noCursor();
