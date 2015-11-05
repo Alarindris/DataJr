@@ -182,7 +182,16 @@ class plotlyThread (threading.Thread):
 
 			old_sensor_data = sensor_data
 			sensor_data = getSerialLine()
-
+			if sensor_data == "!":
+				aTemp = getSerialLine()
+			if sensor_data == '"':
+				aOut = getSerialLine()
+				x = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+				try:
+					stream.write({'x': x, 'y': "%.3f" % (float(aTemp)/10)})
+					stream1.write({'x': x, 'y': aOut})
+				except:
+					pass
 			if sensor_data == "^":
 				aTemp = getSerialLine()
 				aOut = getSerialLine()

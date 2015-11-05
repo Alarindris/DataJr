@@ -802,6 +802,7 @@ void EnterData(double *var, int row, int col, int RetState, int decOff, int prec
 			STATE = RetState;
 			DIG = 1;
 		}
+		WriteVars();
 		pressed = false;
 		return;
 	}
@@ -836,6 +837,7 @@ void EnterDataInt(int *var, int row, int col, int RetState, int decOff, int prec
 			STATE = RetState;
 			DIG = 1;
 		}
+		WriteVars();
 		pressed = false;
 		return;
 	}
@@ -913,7 +915,8 @@ void loop(void) {
 			tempTemp = 0;
 			AlarmCheck(tempAvg);
 			DisplayTemp(tempAvg);
-			SendPlotData();
+			//SendPlotData();
+			SerialSend();
 			tempAvg = 0;
 		}
 	}
@@ -953,12 +956,9 @@ void loop(void) {
 
 	SerialReceive();
 
-	if(millis()>serialTime)
+	if(serialTime % multiSample == 0)
 	{
 		SerialSend();
-		serialTime+=500;
 	}
-	if(millis() % 20000 == 0){
-		WriteVars();
-	}
+	++serialTime;
 }
