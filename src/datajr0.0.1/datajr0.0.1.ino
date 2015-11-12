@@ -52,7 +52,10 @@ const int RELAY_PIN = 8;
 const int ROTARY_A = 3;
 const int ROTARY_B = 2;
 #define ALARM_PIN A0
-const int BUTTON_PIN = 5;
+const int BUTTON_PIN = 6;
+const int RED 		= 4;
+const int GREEN 	= 5;
+const int BLUE 		= 7;
 
 double vars[20] = {0};
 const int OFFSET 	= 33;
@@ -72,6 +75,7 @@ const int DATA2		= 11;
 const int DATA3		= 12;
 const int DATA4		= 13;
 const int MACH_ID	= 14;
+
 
 //#include <Bounce2.h>
 //Bounce button = Bounce();
@@ -148,12 +152,14 @@ bool OVERRIDE = false;
 void Alarm(bool on){
 	if (on){
 		if(alarmOn == false){
+			digitalWrite(RED, LOW);
 			digitalWrite(ALARM_PIN, HIGH);
 			alarmOn = true;
 		}
 	}
 	else{
 		if(alarmOn == true){
+			digitalWrite(RED, HIGH);
 			digitalWrite(ALARM_PIN, LOW);
 			alarmOn = false;
 			lalarmOn = false;
@@ -219,7 +225,9 @@ void SendPlotData(){
 }
 
 void SerialSend(){
-	for(int i = 0; i < VARTOTAL; i++){
+	Serial.println(char(0 + OFFSET));
+	Serial.println(vars[0]*10);
+	for(int i = 1; i < VARTOTAL; i++){
 		Serial.println(char(i + OFFSET));
 		Serial.println(vars[i]);
 	}
@@ -309,7 +317,7 @@ void SetupSPI(void){
 
 struct settings_t{
 	double set, p, i, d, hA, lA, ca;
-	int winSize, dir;
+	int winSize, dir, multi;
 }settings;
 
 void ReadVars(void){
@@ -318,6 +326,7 @@ void ReadVars(void){
 	myPID.SetControllerDirection(settings.dir);
 	vars[SETPOINT] = settings.set;
 	vars[CALIBRATION] = settings.ca;
+	multiSample = settings.multi;
 	//vars[HALARM] = settings.hA;
 	//vars[LALARM] = settings.lA;
 	//WindowSize = settings.winSize;
@@ -354,6 +363,9 @@ void SetupVars(void){
 	if(isnan(vars[CALIBRATION]) == 1){
 		vars[CALIBRATION] = -256.552;
 	}
+	if(isnan(multiSample) == 1){
+		multiSample = 1000;
+	}
 	vars[DATA1] = 0.0;
 	vars[DATA2] = 0.0;
 	vars[DATA3] = 0.0;
@@ -371,6 +383,7 @@ void WriteVars(void){
 	settings.hA = vars[HALARM];
 	settings.lA = vars[LALARM];
 	settings.ca = vars[CALIBRATION];
+	settings.multi = multiSample;
 	eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
 }
 
@@ -389,6 +402,7 @@ void SetupLCD(void){
 
 /******************************==MAIN_LOOP==******************************/
 void setup(void) {
+	
 	ReadVars();
 	SetupVars();
 	Serial.begin(SERIAL_BAUD);
@@ -402,12 +416,12 @@ void setup(void) {
 
 void SetupEncoder(void){
 	pinMode(4, OUTPUT);
-	digitalWrite(4, LOW);
+	digitalWrite(4, HIGH);
 	pinMode(BUTTON_PIN, INPUT);
-	pinMode(6, OUTPUT);
-	digitalWrite(6, LOW);
+	pinMode(5, OUTPUT);
+	digitalWrite(5, HIGH);
 	pinMode(7, OUTPUT);
-	digitalWrite(7, LOW);
+	digitalWrite(7, HIGH);
 	PCICR |= (1 << PCIE2);
 	PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
 	sei();
@@ -420,37 +434,29 @@ void AlarmCheck(double t){
 	}
 	else if(t < vars[LALARM]){
 		Alarm(true);
-		lalarmOn = false;
+		lalarmOn = true;
 	}
 	else if(alarmOn == true){
 		Alarm(false);
+		lalarmOn = false;
+		halarmOn = false;
 	}
 }
 
 void OutputCheck(void){
-	bool changed = false;
 	if(vars[OUT] > millis() - windowStartTime && vars[OUT] > 1000 && outputOn == false){
 		outputOn = true;
-		changed = true;
+		digitalWrite(BLUE, LOW);
 		digitalWrite(RELAY_PIN,HIGH);
 		Serial.println(F("_"));
 		Serial.println(F("on "));
 	}
 	if(vars[OUT] < millis() - windowStartTime && outputOn == true){
 		outputOn = false;
-		changed = true;
+		digitalWrite(BLUE, HIGH);
 		digitalWrite(RELAY_PIN,LOW);
 		Serial.println(F("_"));
 		Serial.println(F("off"));
-	}
-	
-	if(changed){
-		lcd.setCursor(14, 3);
-		if(outputOn){
-			lcd.print(F("Off   "));
-		}else{
-			lcd.print(F("Active"));
-		}
 	}
 }
 
@@ -461,12 +467,8 @@ ISR(PCINT2_vect) {
 	if (result) {
 		if(result == DIR_CW){
 			butDir = 1;
-			digitalWrite(4, HIGH);
-			digitalWrite(7, LOW);
 		}else{
 			butDir = -1;
-			digitalWrite(4, LOW);
-			digitalWrite(7, HIGH);
 		}
 	}
 }
@@ -477,10 +479,12 @@ bool pressed = false;
 void checkPressed(void){
 	Serial.println(String(digitalRead(BUTTON_PIN)));
 	if(digitalRead(BUTTON_PIN) == HIGH){
+		digitalWrite(GREEN, LOW);
 		pressing = true;
 		butDir = 0;
 	}else{
 		if(pressing == true && pressed == false){
+			digitalWrite(GREEN, HIGH);
 			pressed = true;
 			pressing = false;
 		}
@@ -546,6 +550,9 @@ void DisplayScreen(void){
 }
 
 void menu(void){
+	//lcd.setCursor(1, 2);
+	//lcd.print(millis());
+	delay(1);  //delay to catch input on 16MHz chip
 	switch(STATE){
 		case 0://**********************READOUT/MAIN SCREEN*********************
 			CursorHandler();
@@ -869,6 +876,8 @@ void loop(void) {
 
 	checkPressed();
 	
+	
+	
 	if(butDir != 0 || pressing || pressed || OVERRIDE){
 		menu();
 	}
@@ -920,8 +929,8 @@ void loop(void) {
 			tempAvg = 0;
 		}
 	}
-	/*else 
-	{
+	
+	/*{
 		lcd.setCursor(0, 1);
 		
 		if(0x80 & RTD_CH0.status)
@@ -955,10 +964,10 @@ void loop(void) {
 	}  // end of fault handling*/
 
 	SerialReceive();
-
+	/*
 	if(serialTime % multiSample == 0)
 	{
 		SerialSend();
 	}
-	++serialTime;
+	++serialTime;*/
 }
