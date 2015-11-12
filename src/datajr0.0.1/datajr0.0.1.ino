@@ -396,10 +396,21 @@ void SetupLCD(void){
 void SplashCursor(char c, int i){
 	lcd.setCursor(i, 3);
 	lcd.print(c);
-	delay(250);
+	delay(350);
 }
 
 void Splash(void){
+	lcd.setCursor(0, 0);
+	lcd.print(F("Cherry Optical, Inc."));
+	lcd.setCursor(2, 1);
+	lcd.print(F("Producing vision"));
+	lcd.setCursor(3, 2);
+	lcd.print(F("to the highest"));
+	lcd.setCursor(5, 3);
+	lcd.print(F("definition."));
+	delay(7500);
+	
+	lcd.clear();
 	lcd.setCursor(0,0);
 	lcd.print(F("Data Jr. Rev. 2.1"));
 	lcd.setCursor(0,1);
@@ -412,7 +423,7 @@ void Splash(void){
 	lcd.print(F("]"));
 	
 	
-	for(int i = 1; i < 18; i++){
+	for(int i = 1; i < 19; i++){
 		lcd.setCursor(i, 3);
 		SplashCursor('|', i);
 		SplashCursor('/', i);
