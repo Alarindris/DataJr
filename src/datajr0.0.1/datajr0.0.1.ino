@@ -391,27 +391,56 @@ void SetupLCD(void){
 	lcd.begin(20,4);        // 20 columns by 4 rows on display
 	lcd.clear();
 	lcd.setBacklight(HIGH); // Turn on backlight, LOW for off
+}
 
+void SplashCursor(char c, int i){
+	lcd.setCursor(i, 3);
+	lcd.print(c);
+	delay(250);
+}
+
+void Splash(void){
+	lcd.setCursor(0,0);
+	lcd.print(F("Data Jr. Rev. 2.1"));
+	lcd.setCursor(0,1);
+	lcd.print(F("C Erik Sikich 2015"));
+	lcd.setCursor(0,2);
+	lcd.print(F("Loading..."));
+	lcd.setCursor(0,3);
+	lcd.print(F("["));
+	lcd.setCursor(19,3);
+	lcd.print(F("]"));
+	
+	
+	for(int i = 1; i < 18; i++){
+		lcd.setCursor(i, 3);
+		SplashCursor('|', i);
+		SplashCursor('/', i);
+		SplashCursor('-', i);
+		SplashCursor(char(255), i);
+	}
+	
+}
+
+/******************************==MAIN_LOOP==******************************/
+void setup(void) {
+	SetupSPI();
+	SetupLCD();
+	Splash();
+	Serial.begin(SERIAL_BAUD);
+	ReadVars();
+	SetupVars();
+	SetupPID();
+	SetupAutoTune();
+	SetupAlarm();
+	SetupEncoder();
+	lcd.clear();
 	lcd.setCursor(0, 0);
 	lcd.print(F(" Setpoint:"));
 	lcd.setCursor(0, 2);
 	lcd.print(F(" Temp. C :"));
 	lcd.setCursor(0, 3);
 	lcd.print(F(" Menu"));
-}
-
-/******************************==MAIN_LOOP==******************************/
-void setup(void) {
-	
-	ReadVars();
-	SetupVars();
-	Serial.begin(SERIAL_BAUD);
-	SetupPID();
-	SetupAutoTune();
-	SetupSPI();
-	SetupAlarm();
-	SetupLCD();
-	SetupEncoder();
 }
 
 void SetupEncoder(void){
