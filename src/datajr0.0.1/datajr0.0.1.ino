@@ -111,7 +111,7 @@ const int D7_pin =  7;
 
 LiquidCrystal_I2C lcd(I2C_ADDR,En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin,BACKLIGHT_PIN, POSITIVE);
 
-const unsigned long SERIAL_BAUD = 115200;
+const unsigned long SERIAL_BAUD = 9600;
 const int SERIAL_MIN_BITS = 4;
 
 /*** PID vars ***/
@@ -220,18 +220,22 @@ void(* resetFunc) (void) = 0;//declare reset function at address 0
 void SendPlotData(){
 	Serial.println(F("^"));
 	Serial.println(vars[IN]*10);
+	Serial.flush();
 	Serial.println(vars[OUT]);
 	Serial.flush();
 }
 
 void SerialSend(){
 	Serial.println(char(0 + OFFSET));
+	Serial.flush();
 	Serial.println(vars[0]*10);
+	Serial.flush();
 	for(int i = 1; i < VARTOTAL; i++){
 		Serial.println(char(i + OFFSET));
+		Serial.flush();
 		Serial.println(vars[i]);
+		Serial.flush();
 	}
-	//Serial.flush();
 }
 
 void SerialReceive(){
@@ -396,7 +400,7 @@ void SetupLCD(void){
 void SplashCursor(char c, int i){
 	lcd.setCursor(i, 3);
 	lcd.print(c);
-	delay(350);
+	delay(550);
 }
 
 void Splash(void){
