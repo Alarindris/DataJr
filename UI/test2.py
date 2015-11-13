@@ -159,11 +159,6 @@ class plotlyThread (threading.Thread):
 		global aHum
 		global aTemp
 		global aOut
-		global data1
-		global data2
-		global data3
-		global data4
-		global mach_id
 		aTemp = 0
 		aOut = 0
 		aP = 0
@@ -182,17 +177,21 @@ class plotlyThread (threading.Thread):
 		aAmbient = 0
 		aHum = 0
 		aSetpoint = 0
-		data1 = 0
-		data2 = 0
-		data3 = 0
-		data4 = 0
-		mach_id = 0
 		
 		while exitflag == 0:
 
 			old_sensor_data = sensor_data
 			sensor_data = getSerialLine()
-
+			if sensor_data == "!":
+				aTemp = getSerialLine()
+			if sensor_data == '"':
+				aOut = getSerialLine()
+				x = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+				try:
+					stream.write({'x': x, 'y': "%.3f" % (float(aTemp)/10)})
+					stream1.write({'x': x, 'y': aOut})
+				except:
+					pass
 			if sensor_data == "^":
 				aTemp = getSerialLine()
 				aOut = getSerialLine()
@@ -203,30 +202,38 @@ class plotlyThread (threading.Thread):
 				except:
 					pass
 			if sensor_data == "#":
-				aSetpoint = getSerialLine()                                     
+				aSetpoint = getSerialLine()                  
+			if sensor_data == "}":
+				aHum = getSerialLine()                    
 			if sensor_data == "$":
 				aP = getSerialLine()                   
 			if sensor_data == "%":
 				aI = getSerialLine()                    
 			if sensor_data == "&":
 				aD = getSerialLine()          
+			if sensor_data == "=":
+				aPOut = getSerialLine()
+			if sensor_data == "*":
+				aIOut = getSerialLine()
+			if sensor_data == "(":
+				aDOut = getSerialLine()
 			if sensor_data == "'":
 				aTuning = getSerialLine()
+			if sensor_data == "_":
+				aCont = getSerialLine()
+			if sensor_data == "+":
+				aMode = getSerialLine()
+			if sensor_data == "-":
+				aOver = getSerialLine()
 			if sensor_data == ")":
 				aHAlarm = getSerialLine()
 			if sensor_data == "(":
 				aLAlarm = getSerialLine()
-			if sensor_data == "+":
-				data1 = getSerialLine()
-			if sensor_data == ",":
-				data2 = getSerialLine()
-			if sensor_data == "-":
-				data3 = getSerialLine()
-			if sensor_data == ".":
-				data4 = getSerialLine()
-			if sensor_data == "/":
-				mach_id = getSerialLine()
-				
+			if sensor_data == "]":
+				aAlarm  = getSerialLine()
+			if sensor_data == "{":
+				aAmbient = getSerialLine()
+			
 			if display == True:
 				screen.addstr(1, 16, str(aSetpoint), curses.A_REVERSE)
 				screen.addstr(3, 16, "%.3f" % (float(aTemp)/10), curses.A_REVERSE)
