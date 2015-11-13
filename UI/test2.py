@@ -9,7 +9,7 @@ import serial
 import curses
 import atexit
 import sys
-BAUD = 9600
+BAUD = 115200
 
 ser = serial.Serial('/dev/ttyAMA0', BAUD, timeout=3)
 
@@ -22,7 +22,7 @@ def exit():
 	print "Exit successful."
 atexit.register(exit)
 
-BAUD = 9600
+BAUD = 115200
 screenWidth = 80
 screenHeight = 24
 screenstd = curses.initscr()
