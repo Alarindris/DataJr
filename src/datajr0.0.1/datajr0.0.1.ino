@@ -118,7 +118,7 @@ const int SERIAL_MIN_BITS = 4;
 int WindowSize = 10000;     //PID variables
 unsigned long windowStartTime;
 //int direction = REVERSE;
-PID myPID(&vars[IN], &vars[OUT], &vars[SETPOINT],19432.63, 807.59,0, 1);  // create PID variable  REVERSE = COOL = 1  DIRECT = HEAT = 0
+PID myPID(&vars[IN], &vars[OUT], &vars[SETPOINT],19432.63, 807.59,0, 0);  // create PID variable  REVERSE = COOL = 1  DIRECT = HEAT = 0
 
 /*** Auto-tune vars ***/
 byte ATuneModeRemember=2;
@@ -186,7 +186,7 @@ void changeAutoTune(){
 	if(vars[TUNING] < 0.5){
 		
 		//Set the output to the desired starting frequency.
-		vars[OUT] = aTuneStartValue;
+		vars[OUT] = (double)aTuneStartValue;
 		aTune.SetNoiseBand(aTuneNoise);
 		aTune.SetOutputStep(aTuneStep);
 		aTune.SetLookbackSec((int)aTuneLookBack);
@@ -341,7 +341,7 @@ void SetupVars(void){
 		vars[SETPOINT] = 18.5;
 	}
 	if(isnan(vars[OUT]) == 1){
-		vars[OUT] = 0;
+		vars[OUT] = 0.0;
 	}
 	if(isnan(vars[IN]) == 1){
 		vars[IN] = 22;
@@ -521,7 +521,6 @@ bool pressing = false;
 bool pressed = false;
 
 void checkPressed(void){
-	Serial.println(String(digitalRead(BUTTON_PIN)));
 	if(digitalRead(BUTTON_PIN) == HIGH){
 		digitalWrite(GREEN, LOW);
 		pressing = true;
