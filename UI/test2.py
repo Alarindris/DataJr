@@ -1,14 +1,18 @@
 #!/usr/bin/python
 
+import sqlite3
 import threading
 import plotly.plotly as py
 from plotly.graph_objs import *
 import datetime
+import os
 import time
 import serial
 import curses
 import atexit
 import sys
+import glob
+
 BAUD = 9600
 
 ser = serial.Serial('/dev/ttyAMA0', BAUD, timeout=3)
@@ -133,12 +137,25 @@ def writeSerialLine(token):
 	ser.write("\n")
 	ser.flush()
 
+dbname='/home/pi/DB/datalog.db'
+def log_data(timestamp, tdata, tid):
+
+	conn=sqlite3.connect(dbname)
+	curs=conn.cursor()
+
+	curs.execute("INSERT INTO datalog values((?), (?), (?))", (timestamp, tdata, tid))
+
+	conn.commit()
+
+	conn.close()
+
 class plotlyThread (threading.Thread):
 	def __init__(self, threadID, name, counter):
 		threading.Thread.__init__(self)
 		self.threadID = threadID
 		self.name = name
 		self.counter = counter
+
 	def run(self):
 		sensor_data = 0
 		global aSetpoint
@@ -190,6 +207,8 @@ class plotlyThread (threading.Thread):
 				try:
 					stream.write({'x': x, 'y': "%.3f" % (float(aTemp)/10)})
 					stream1.write({'x': x, 'y': aOut})
+					log_data(x, float(aTemp)/10, "TEMP")
+					log_data(x, aOut, "PIDOUT")
 				except:
 					pass
 			if sensor_data == "^":
@@ -199,6 +218,8 @@ class plotlyThread (threading.Thread):
 				try:
 					stream.write({'x': x, 'y': "%.3f" % (float(aTemp)/10)})
 					stream1.write({'x': x, 'y': aOut})
+					log_data(x, float(aTemp)/10, "TEMP")
+					log_data(x, aOut, "PIDOUT")
 				except:
 					pass
 			if sensor_data == "#":
