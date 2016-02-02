@@ -137,12 +137,12 @@ def writeSerialLine(token):
 	ser.write("\n")
 	ser.flush()
 
-dbname='/home/pi/DB/datalog.db'
-def log_data(timestamp, tdata, tid):
+dbname='/mnt/usb/DB/datalog.db'
+def log_data(tdata, tid):
 
 	conn=sqlite3.connect(dbname)
 	curs=conn.cursor()
-
+	timestamp = time.time()
 	curs.execute("INSERT INTO datalog values((?), (?), (?))", (timestamp, tdata, tid))
 
 	conn.commit()
@@ -194,6 +194,7 @@ class plotlyThread (threading.Thread):
 		aAmbient = 0
 		aHum = 0
 		aSetpoint = 0
+
 		
 		while exitflag == 0:
 
@@ -203,25 +204,28 @@ class plotlyThread (threading.Thread):
 				aTemp = getSerialLine()
 			if sensor_data == '"':
 				aOut = getSerialLine()
+				xtime = time.time()
 				x = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
 				try:
 					stream.write({'x': x, 'y': "%.3f" % (float(aTemp)/10)})
 					stream1.write({'x': x, 'y': aOut})
-					log_data(x, float(aTemp)/10, "TEMP")
-					log_data(x, aOut, "PIDOUT")
+					log_data(float(aTemp)/10, "TEMP")
+					log_data(aOut, "PIDOUT")
 				except:
 					pass
 			if sensor_data == "^":
 				aTemp = getSerialLine()
 				aOut = getSerialLine()
 				x = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+				xtime = time.time()
 				try:
 					stream.write({'x': x, 'y': "%.3f" % (float(aTemp)/10)})
 					stream1.write({'x': x, 'y': aOut})
-					log_data(x, float(aTemp)/10, "TEMP")
-					log_data(x, aOut, "PIDOUT")
+					log_data(float(aTemp)/10, "TEMP")
+					log_data(aOut, "PIDOUT")
 				except:
 					pass
+
 			if sensor_data == "#":
 				aSetpoint = getSerialLine()                  
 			if sensor_data == "}":
@@ -279,11 +283,13 @@ class plotlyThread (threading.Thread):
 				
 				screen.refresh()
 			else:
+
 				win.erase()
 				win.addstr(0, 1, "Temp:      Target:      Control:")
 				win.addstr(0, 6, "%.3f" % (float(aTemp)/10), curses.A_REVERSE)
 				win.addstr(0, 19, str(aSetpoint), curses.A_REVERSE)
 				win.addstr(0, 33, str(aTuning), curses.A_REVERSE)
+				'''win.addstr(1, 1, str(time.time()))'''
 				win.refresh()
 			
 
