@@ -115,6 +115,7 @@ const unsigned long SERIAL_BAUD = 9600;
 const int SERIAL_MIN_BITS = 4;
 
 /*** PID vars ***/
+const int DEFAULT_DIRECTION = 0;
 int WindowSize = 10000;     //PID variables
 unsigned long windowStartTime;
 //int direction = REVERSE;
@@ -297,6 +298,7 @@ void SetupAutoTune(void){
 		vars[TUNING] = 1;
 	}
 	serialTime = 0;
+	aTune.SetControlType(1); //0 = PI, 1 = PID
 }
 
 void SetupPID(void){
@@ -370,6 +372,9 @@ void SetupVars(void){
 	if(isnan(multiSample) == 1){
 		multiSample = 1000;
 	}
+	if(isnan(settings.dir)){
+		settings.dir = DEFAULT_DIRECTION;
+	}
 	vars[DATA1] = 0.0;
 	vars[DATA2] = 0.0;
 	vars[DATA3] = 0.0;
@@ -381,7 +386,7 @@ void WriteVars(void){
 	settings.p = myPID.GetKp();
 	settings.i = myPID.GetKi();
 	settings.d = myPID.GetKd();
-	settings.dir = 1;
+	settings.dir = myPID.GetDirection();			////THIS FUCKING THING DIRECTION REVERSE HEAT COOL 
 	settings.set = vars[SETPOINT];
 	settings.winSize = WindowSize;
 	settings.hA = vars[HALARM];
@@ -585,6 +590,14 @@ void DisplayScreen(void){
 	lcd.clear();
 	lcd.setCursor(1, 0);
 	lcd.print(F("Setpoint:"));
+	lcd.setCursor(1, 1);
+	lcd.print(F("Direction:"));
+	lcd.setCursor(12, 1);
+	if(myPID.GetDirection() == 0){
+		lcd.print(F("Heat"));
+	}else{
+		lcd.print(F("Cool"));
+	}
 	lcd.setCursor(1, 2);
 	lcd.print(F("Temp C:"));
 	lcd.setCursor(1, 3);
@@ -914,12 +927,11 @@ void EnterDataInt(int *var, int row, int col, int RetState, int decOff, int prec
 
 void loop(void) {
 	//u8g.firstPage();  /***<-- DONT MOVE THIS??***/
+	
 	rtd_ptr = &RTD_CH0;
 	rtd_ch0.MAX31865_full_read(rtd_ptr);          // Update MAX31855 readings
 
 	checkPressed();
-	
-	
 	
 	if(butDir != 0 || pressing || pressed || OVERRIDE){
 		menu();
